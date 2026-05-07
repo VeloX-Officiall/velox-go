@@ -8,9 +8,11 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+import { RequireAuth } from "@/lib/auth";
+
 export const Route = createFileRoute("/courier")({
   head: () => ({ meta: [{ title: "Courier · VeloX" }] }),
-  component: CourierDashboard,
+  component: () => <RequireAuth><CourierDashboard /></RequireAuth>,
 });
 
 const sampleOrders = [

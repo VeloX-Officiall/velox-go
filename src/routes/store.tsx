@@ -9,9 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+import { RequireAuth } from "@/lib/auth";
+
 export const Route = createFileRoute("/store")({
   head: () => ({ meta: [{ title: "Store · VeloX" }] }),
-  component: StoreDashboard,
+  component: () => <RequireAuth><StoreDashboard /></RequireAuth>,
 });
 
 const initialPosts = [

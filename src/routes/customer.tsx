@@ -52,7 +52,9 @@ function CustomerDashboard() {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
   const [note, setNote] = useState("");
+  const [distance, setDistance] = useState(3);
   const [submitted, setSubmitted] = useState(false);
+  const fee = calcDeliveryFee(distance);
 
   const submit = () => {
     if (!pickup || !dropoff) return;

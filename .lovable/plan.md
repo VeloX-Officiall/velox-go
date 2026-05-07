@@ -1,53 +1,51 @@
-## VeloX Final MVP — Implementation Plan
+## VeloX – Backend Integration & Full Functionality
 
-A large set of changes spanning UI, business logic, backend, and real-time features. I'll ship in focused phases.
+Large multi-phase build. Delivered in 4 phases with checkpoints.
 
-### Phase 1 — UI/UX & Content (frontend only)
-- Strip placeholder stats (2.4k, 380, 78k) from landing hero.
-- Add **"Dəyərlərimiz"** section: 3 cards (Dürüstlük, Şəffaflıq, Yaxınlıq).
-- New route `/about` ("Haqqımızda") with the full provided copy + per-role sections.
-- Add About link to the header nav.
+### Phase 1 — Cleanup & Neutrality (frontend only)
+- Strip "Baku / Khachmaz / Azerbaijan" mentions from landing, header, footer, about page.
+- Remove any remaining placeholder stats / hardcoded city names in courier/store/customer mock data (replace with neutral labels like "Şəhər mərkəzi", "Mağaza ünvanı").
+- Pricing copy stays in AZN (currency unit, not geography).
 
-### Phase 2 — Pricing engine
-- New helper `src/lib/pricing.ts` implementing the tier logic:
-  - ≤1 km → 1.50 AZN
-  - 1–10 km → 1.50 + `(Math.ceil(km) - 1) * 0.50`
-  - >10 km → tier-2 price at 10 km + `(Math.ceil(km) - 10) * 0.40`
-- "Get Anything" form: distance input/slider + live total fee preview + confirm step.
-- Unit-style sanity examples shown in About page.
+### Phase 2 — Lovable Cloud + Auth + Schema
+Enable Lovable Cloud, then create schema:
 
-### Phase 3 — Lovable Cloud + Mandatory Auth
-- Enable Lovable Cloud.
-- Tables: `profiles` (id, full_name, phone, role enum: courier|store|customer), `user_roles` (separate, RLS-safe pattern), `orders`, `messages`, `courier_locations`.
-- `/auth` route with Email/Password + Google sign-in, role selection on signup.
-- Convert `/courier`, `/store`, `/customer` into protected routes via `_authenticated` layout. Role mismatch → redirect to correct dashboard.
-- Landing role buttons → if signed-out, go to `/auth?role=...`; if signed-in, go to dashboard.
+```text
+profiles(id uuid PK → auth.users, full_name, phone, avatar_url, created_at)
+app_role enum: 'courier' | 'store' | 'customer'
+user_roles(id, user_id, role)  + has_role() SECURITY DEFINER
+posts(id, store_id, title, description, tags[], image_url, location, created_at)
+post_likes(id, post_id, user_id, UNIQUE(post_id,user_id))
+post_comments(id, post_id, user_id, body, created_at)
+orders(id, customer_id, courier_id, store_id, pickup_lat/lng, drop_lat/lng,
+       distance_km, fee_azn, status, note, created_at)
+conversations(id, user_a, user_b, UNIQUE pair)
+messages(id, conversation_id, sender_id, body, created_at)
+courier_wallet(user_id PK, balance_azn, day_pass_until)
+```
 
-### Phase 4 — Orders, multi-order limit & independent billing
-- Order creation writes to `orders` with computed fee (server-side recalculation for trust).
-- Courier accept flow: DB check enforces max 3 active orders per courier.
-- Each order stores its own fee independently.
+RLS on all tables. `_authenticated` layout route guards `/courier`, `/store`, `/customer`. Landing role buttons → `/auth?role=…`. After login, redirect to that role's dashboard. `/auth` page: email+password + Google.
 
-### Phase 5 — Real-time maps & GPS
-- Use Leaflet + OpenStreetMap (no API key needed) for map rendering and routing line.
-- Courier dashboard publishes geolocation to `courier_locations` (Supabase Realtime).
-- Customer order screen subscribes and renders live courier marker + pickup/dropoff pins + route line.
+### Phase 3 — Real pricing + Social + DMs
+- Pricing already lives in `src/lib/pricing.ts` (Haversine + tiers). Wire "Get Anything" to compute fee from real A/B coords (click-to-place pins on a Leaflet map; or two coord inputs as fallback). Server function recomputes fee before insert.
+- Feed: posts loaded from `posts` table; like/comment buttons write to `post_likes`/`post_comments` with optimistic UI; counts update via Supabase Realtime.
+- DM: `/messages` route lists conversations; thread view subscribes to Realtime on `messages`. "Mesaj" buttons on store cards / courier list / customer order open a DM with that user.
 
-### Phase 6 — DM + AI Support
-- `messages` table with `conversation_id` (order-scoped) supporting Courier↔Store↔Customer pairs. Realtime subscription.
-- AI Support: edge/server function calling Lovable AI Gateway (`google/gemini-3-flash-preview`) with system prompt encoding VeloX rules + pricing formula. Chat UI in each dashboard.
+### Phase 4 — AI Support Bot + Audit dead buttons
+- `src/components/SupportBot.tsx` — floating button bottom-right on every page (mounted in `__root.tsx`). Chat panel calls server fn `aiSupport` → Lovable AI Gateway (`google/gemini-3-flash-preview`) with system prompt encoding VeloX rules (1 AZN daily pass, 0% commission, tiered pricing).
+- Sweep every existing button: every onClick must navigate, mutate, or open a modal — no dead buttons.
 
 ### Technical notes
-- Roles via separate `user_roles` table + `has_role()` SECURITY DEFINER function (per security policy — never store role on profiles for auth checks).
-- Pricing recomputed on the server before insert to prevent client tampering.
-- Map: `react-leaflet` + `leaflet`. Distance via Haversine in `pricing.ts`.
-- AI chat via `createServerFn` calling `https://ai.gateway.lovable.dev/v1/chat/completions` with `LOVABLE_API_KEY`.
+- Roles in separate `user_roles` table + `has_role()` to avoid RLS recursion.
+- Pricing recomputed server-side in `createOrder` server fn; never trust client fee.
+- Realtime: enable replication on `messages`, `post_likes`, `post_comments`.
+- AI gateway via `createServerFn` reading `LOVABLE_API_KEY` inside `.handler()`.
+- Maps: `leaflet` + `react-leaflet` with OpenStreetMap tiles (no API key).
 
 ### Delivery order
-Given the size, I'll ship in this order and confirm after each milestone:
-1. Phase 1 + 2 (UI cleanup, About page, pricing engine wired into Get Anything) — ships immediately.
-2. Phase 3 (Cloud + Auth + protected routes).
-3. Phase 4 + 5 (Orders, multi-order rule, live map).
-4. Phase 6 (DM + AI bot).
+1. Phase 1 (quick cleanup) — ship immediately.
+2. Phase 2 (Cloud + auth + schema) — checkpoint, test login flow.
+3. Phase 3 (pricing UI + likes/comments + DM).
+4. Phase 4 (SupportBot + dead-button audit).
 
-Reply **"go"** to start, or tell me to reorder/skip phases.
+Reply "go" to start with Phase 1+2, or tell me to reorder/skip phases.

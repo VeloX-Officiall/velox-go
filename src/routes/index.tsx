@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Bike, Store, User, ArrowRight, Coins, Users, Heart, ShieldCheck, Eye, MapPin } from "lucide-react";
+import { Bike, Store, User as UserIcon, ArrowRight, Coins, Users, Heart, ShieldCheck, Eye, MapPin } from "lucide-react";
 import "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -23,13 +23,13 @@ export const Route = createFileRoute("/")({
 });
 
 function RoleCard({
-  to,
+  role,
   icon: Icon,
   title,
   desc,
   tone,
 }: {
-  to: string;
+  role: "courier" | "store" | "customer";
   icon: typeof Bike;
   title: string;
   desc: string;
@@ -40,8 +40,9 @@ function RoleCard({
     success: "from-success/15 to-success/0 text-success",
     warning: "from-warning/20 to-warning/0 text-warning",
   }[tone];
+  const dest = role === "courier" ? "/courier" : role === "store" ? "/store" : "/customer";
   return (
-    <Link to={to} className="group block">
+    <Link to="/auth" search={{ role, redirect: dest } as never} className="group block">
       <div className="relative h-full overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-card transition-all hover:-translate-y-1 hover:shadow-elevated">
         <div className={`absolute inset-x-0 top-0 h-32 bg-gradient-to-b ${toneClass} opacity-60`} />
         <div className="relative">
@@ -52,7 +53,7 @@ function RoleCard({
           <p className="mt-2 text-sm text-muted-foreground">{desc}</p>
           <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-primary">
             <span>→</span>
-            <span className="opacity-0 transition-opacity group-hover:opacity-100">Open</span>
+            <span className="opacity-0 transition-opacity group-hover:opacity-100">Daxil ol</span>
           </div>
         </div>
       </div>
@@ -128,9 +129,9 @@ function Landing() {
             <ArrowRight className="h-5 w-5 text-muted-foreground" />
           </div>
           <div className="grid gap-5 sm:grid-cols-3">
-            <RoleCard to="/courier" icon={Bike} title={t("i_am_courier")} desc={t("courier_dash")} tone="primary" />
-            <RoleCard to="/store" icon={Store} title={t("i_am_store")} desc={t("store_dash")} tone="success" />
-            <RoleCard to="/customer" icon={User} title={t("i_am_customer")} desc={t("customer_dash")} tone="warning" />
+            <RoleCard role="courier" icon={Bike} title={t("i_am_courier")} desc={t("courier_dash")} tone="primary" />
+            <RoleCard role="store" icon={Store} title={t("i_am_store")} desc={t("store_dash")} tone="success" />
+            <RoleCard role="customer" icon={UserIcon} title={t("i_am_customer")} desc={t("customer_dash")} tone="warning" />
           </div>
         </section>
 

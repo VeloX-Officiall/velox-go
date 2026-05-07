@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { calcDeliveryFee, formatAzn } from "@/lib/pricing";
 
 export const Route = createFileRoute("/customer")({
   head: () => ({ meta: [{ title: "Customer · VeloX" }] }),

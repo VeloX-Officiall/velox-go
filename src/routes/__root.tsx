@@ -9,6 +9,8 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { SupportBot } from "@/components/SupportBot";
+import { Toaster } from "sonner";
 
 function NotFoundComponent() {
   return (
@@ -117,6 +119,8 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <SupportBot />
+      <Toaster richColors position="top-center" />
     </QueryClientProvider>
   );
 }

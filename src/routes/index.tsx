@@ -85,7 +85,7 @@ function Landing() {
           <div className="absolute -bottom-20 -left-10 h-72 w-72 rounded-full bg-warning/20 blur-3xl" />
           <div className="relative max-w-2xl">
             <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium uppercase tracking-wider backdrop-blur">
-              Baku · Khachmaz · Azerbaijan
+              {t("tagline")}
             </span>
             <h1 className="mt-5 text-4xl font-bold leading-tight sm:text-5xl">
               {t("hero_title")}
@@ -151,7 +151,7 @@ function Landing() {
         </section>
 
         <footer className="mt-20 border-t border-border pt-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} VeloX · Made for Azerbaijan
+          © {new Date().getFullYear()} VeloX
         </footer>
       </main>
     </div>

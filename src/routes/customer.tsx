@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { calcDeliveryFee, formatAzn } from "@/lib/pricing";
 
+import { RequireAuth } from "@/lib/auth";
+
 export const Route = createFileRoute("/customer")({
   head: () => ({ meta: [{ title: "Customer · VeloX" }] }),
-  component: CustomerDashboard,
+  component: () => <RequireAuth><CustomerDashboard /></RequireAuth>,
 });
 
 const feed = [

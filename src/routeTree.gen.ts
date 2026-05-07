@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StoreRouteImport } from './routes/store'
+import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as CustomerRouteImport } from './routes/customer'
 import { Route as CourierRouteImport } from './routes/courier'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -19,6 +20,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const StoreRoute = StoreRouteImport.update({
   id: '/store',
   path: '/store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagesRoute = MessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomerRoute = CustomerRouteImport.update({
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
+  '/messages': typeof MessagesRoute
   '/store': typeof StoreRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
+  '/messages': typeof MessagesRoute
   '/store': typeof StoreRoute
 }
 export interface FileRoutesById {
@@ -70,13 +78,28 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
+  '/messages': typeof MessagesRoute
   '/store': typeof StoreRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/auth' | '/courier' | '/customer' | '/store'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/courier'
+    | '/customer'
+    | '/messages'
+    | '/store'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/auth' | '/courier' | '/customer' | '/store'
+  to:
+    | '/'
+    | '/about'
+    | '/auth'
+    | '/courier'
+    | '/customer'
+    | '/messages'
+    | '/store'
   id:
     | '__root__'
     | '/'
@@ -84,6 +107,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/courier'
     | '/customer'
+    | '/messages'
     | '/store'
   fileRoutesById: FileRoutesById
 }
@@ -93,6 +117,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CourierRoute: typeof CourierRoute
   CustomerRoute: typeof CustomerRoute
+  MessagesRoute: typeof MessagesRoute
   StoreRoute: typeof StoreRoute
 }
 
@@ -103,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/store'
       fullPath: '/store'
       preLoaderRoute: typeof StoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messages': {
+      id: '/messages'
+      path: '/messages'
+      fullPath: '/messages'
+      preLoaderRoute: typeof MessagesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/customer': {
@@ -149,8 +181,19 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CourierRoute: CourierRoute,
   CustomerRoute: CustomerRoute,
+  MessagesRoute: MessagesRoute,
   StoreRoute: StoreRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

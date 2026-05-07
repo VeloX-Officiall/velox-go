@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { Bike, Store, User, ArrowRight, Coins, Users, Heart } from "lucide-react";
+import { Bike, Store, User, ArrowRight, Coins, Users, Heart, ShieldCheck, Eye, MapPin } from "lucide-react";
 import "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -93,23 +93,33 @@ function Landing() {
             <p className="mt-4 text-base text-primary-foreground/85 sm:text-lg">
               {t("hero_sub")}
             </p>
-
-            <div className="mt-8 grid grid-cols-3 gap-3 text-center sm:max-w-md">
-              {[
-                { v: "2.4k+", k: t("stats_couriers") },
-                { v: "380+", k: t("stats_stores") },
-                { v: "78k", k: t("stats_orders") },
-              ].map((s) => (
-                <div key={s.k} className="rounded-xl bg-white/10 px-3 py-3 backdrop-blur">
-                  <div className="text-xl font-bold">{s.v}</div>
-                  <div className="mt-0.5 text-[11px] uppercase tracking-wide text-primary-foreground/70">
-                    {s.k}
-                  </div>
-                </div>
-              ))}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link to="/about" className="inline-flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25">
+                {t("about")} <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </motion.section>
+
+        {/* Values */}
+        <section className="mt-12">
+          <h2 className="text-2xl font-bold">{t("values_title")}</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+            {[
+              { icon: ShieldCheck, title: t("v1_title"), desc: t("v1_desc"), tone: "text-success" },
+              { icon: Eye, title: t("v2_title"), desc: t("v2_desc"), tone: "text-primary" },
+              { icon: MapPin, title: t("v3_title"), desc: t("v3_desc"), tone: "text-warning" },
+            ].map((v) => (
+              <div key={v.title} className="rounded-2xl border border-border bg-card p-6 shadow-card">
+                <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-accent ${v.tone}`}>
+                  <v.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold">{v.title}</h3>
+                <p className="mt-1.5 text-sm text-muted-foreground">{v.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Roles */}
         <section className="mt-12">

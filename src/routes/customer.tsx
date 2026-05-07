@@ -8,6 +8,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { calcDeliveryFee, formatAzn } from "@/lib/pricing";
 
 export const Route = createFileRoute("/customer")({
   head: () => ({ meta: [{ title: "Customer · VeloX" }] }),
@@ -51,7 +52,9 @@ function CustomerDashboard() {
   const [pickup, setPickup] = useState("");
   const [dropoff, setDropoff] = useState("");
   const [note, setNote] = useState("");
+  const [distance, setDistance] = useState(3);
   const [submitted, setSubmitted] = useState(false);
+  const fee = calcDeliveryFee(distance);
 
   const submit = () => {
     if (!pickup || !dropoff) return;
@@ -167,8 +170,30 @@ function CustomerDashboard() {
               <Input placeholder={t("pickup")} value={pickup} onChange={(e) => setPickup(e.target.value)} className="h-12 rounded-xl" />
               <Input placeholder={t("dropoff")} value={dropoff} onChange={(e) => setDropoff(e.target.value)} className="h-12 rounded-xl" />
               <Textarea placeholder="Qeyd (məs. paketin təsviri)" value={note} onChange={(e) => setNote(e.target.value)} className="min-h-[80px] rounded-xl" />
+
+              <div className="rounded-xl border border-border bg-accent/30 p-4">
+                <label className="flex items-center justify-between text-sm font-semibold">
+                  <span>{t("distance_km")}</span>
+                  <span className="text-primary">{distance.toFixed(1)} km</span>
+                </label>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={30}
+                  step={0.1}
+                  value={distance}
+                  onChange={(e) => setDistance(parseFloat(e.target.value))}
+                  className="mt-2 w-full accent-primary"
+                />
+                <div className="mt-3 flex items-baseline justify-between">
+                  <span className="text-xs text-muted-foreground">{t("estimated_fee")}</span>
+                  <span className="text-2xl font-bold text-success">{formatAzn(fee)}</span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">{t("fee_breakdown_note")}</p>
+              </div>
+
               <Button onClick={submit} className="h-12 w-full rounded-xl bg-gradient-hero text-base font-bold">
-                {t("request_delivery")}
+                {t("request_delivery")} · {formatAzn(fee)}
               </Button>
               {submitted && (
                 <motion.div

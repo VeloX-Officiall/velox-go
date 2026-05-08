@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { Truck, MessageCircle, LogOut } from "lucide-react";
+import { Truck, MessageCircle, LogOut, User as UserIcon } from "lucide-react";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { useAuthSession, signOut } from "@/lib/auth";
 
@@ -22,6 +22,9 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
         <div className="flex items-center gap-2">
           {user && (
             <>
+              <Link to="/profile" className="flex h-9 w-9 items-center justify-center rounded-xl border border-border hover:bg-accent" title="Profil">
+                <UserIcon className="h-4 w-4" />
+              </Link>
               <Link to="/messages" className="flex h-9 w-9 items-center justify-center rounded-xl border border-border hover:bg-accent" title="Mesajlar">
                 <MessageCircle className="h-4 w-4" />
               </Link>

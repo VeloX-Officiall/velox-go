@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StoreRouteImport } from './routes/store'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as CustomerRouteImport } from './routes/customer'
 import { Route as CourierRouteImport } from './routes/courier'
@@ -20,6 +21,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const StoreRoute = StoreRouteImport.update({
   id: '/store',
   path: '/store',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MessagesRoute = MessagesRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
   '/messages': typeof MessagesRoute
+  '/profile': typeof ProfileRoute
   '/store': typeof StoreRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
   '/messages': typeof MessagesRoute
+  '/profile': typeof ProfileRoute
   '/store': typeof StoreRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
   '/messages': typeof MessagesRoute
+  '/profile': typeof ProfileRoute
   '/store': typeof StoreRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/courier'
     | '/customer'
     | '/messages'
+    | '/profile'
     | '/store'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/courier'
     | '/customer'
     | '/messages'
+    | '/profile'
     | '/store'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/courier'
     | '/customer'
     | '/messages'
+    | '/profile'
     | '/store'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   CourierRoute: typeof CourierRoute
   CustomerRoute: typeof CustomerRoute
   MessagesRoute: typeof MessagesRoute
+  ProfileRoute: typeof ProfileRoute
   StoreRoute: typeof StoreRoute
 }
 
@@ -128,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/store'
       fullPath: '/store'
       preLoaderRoute: typeof StoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/messages': {
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   CourierRoute: CourierRoute,
   CustomerRoute: CustomerRoute,
   MessagesRoute: MessagesRoute,
+  ProfileRoute: ProfileRoute,
   StoreRoute: StoreRoute,
 }
 export const routeTree = rootRouteImport

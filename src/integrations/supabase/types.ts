@@ -239,24 +239,33 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
           full_name: string | null
           id: string
           phone: string | null
+          social_url: string | null
+          verified: boolean
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           full_name?: string | null
           id: string
           phone?: string | null
+          social_url?: string | null
+          verified?: boolean
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
           phone?: string | null
+          social_url?: string | null
+          verified?: boolean
         }
         Relationships: []
       }
@@ -290,6 +299,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      refresh_store_verified: { Args: { _store: string }; Returns: undefined }
     }
     Enums: {
       app_role: "courier" | "store" | "customer"

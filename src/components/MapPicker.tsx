@@ -1,39 +1,13 @@
-import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, useMapEvents } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-
-// Fix default icon paths (Vite/SSR safe)
-const iconA = L.divIcon({
-  className: "",
-  html: `<div style="background:hsl(160 84% 39%);color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);border:2px solid white">A</div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-});
-const iconB = L.divIcon({
-  className: "",
-  html: `<div style="background:hsl(38 92% 50%);color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);border:2px solid white">B</div>`,
-  iconSize: [32, 32],
-  iconAnchor: [16, 16],
-});
+import { useEffect, useRef, useState } from "react";
 
 export type LatLng = { lat: number; lng: number };
-
-function ClickHandler({ onClick }: { onClick: (p: LatLng) => void }) {
-  useMapEvents({
-    click(e) {
-      onClick({ lat: e.latlng.lat, lng: e.latlng.lng });
-    },
-  });
-  return null;
-}
 
 export function MapPicker({
   pickup,
   dropoff,
   onChange,
   height = 280,
-  center = { lat: 40.4093, lng: 49.8671 }, // neutral default
+  center = { lat: 40.4093, lng: 49.8671 },
 }: {
   pickup: LatLng | null;
   dropoff: LatLng | null;
@@ -41,28 +15,68 @@ export function MapPicker({
   height?: number;
   center?: LatLng;
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const layersRef = useRef<{ a: any; b: any; line: any; L: any }>({ a: null, b: null, line: null, L: null });
+  const stateRef = useRef({ pickup, dropoff });
+  stateRef.current = { pickup, dropoff };
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const [ready, setReady] = useState(false);
 
-  if (!mounted) return <div style={{ height }} className="rounded-2xl bg-accent/30" />;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const Lmod = await import("leaflet");
+      await import("leaflet/dist/leaflet.css");
+      if (cancelled || !containerRef.current) return;
+      const L = (Lmod as any).default || Lmod;
+      layersRef.current.L = L;
+      const map = L.map(containerRef.current).setView([center.lat, center.lng], 12);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap",
+      }).addTo(map);
+      map.on("click", (e: any) => {
+        const p = { lat: e.latlng.lat, lng: e.latlng.lng };
+        const cur = stateRef.current;
+        if (!cur.pickup) onChangeRef.current({ pickup: p, dropoff: cur.dropoff });
+        else if (!cur.dropoff) onChangeRef.current({ pickup: cur.pickup, dropoff: p });
+        else onChangeRef.current({ pickup: p, dropoff: null });
+      });
+      mapRef.current = map;
+      setReady(true);
+    })();
+    return () => {
+      cancelled = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleClick = (p: LatLng) => {
-    if (!pickup) onChange({ pickup: p, dropoff });
-    else if (!dropoff) onChange({ pickup, dropoff: p });
-    else onChange({ pickup: p, dropoff: null });
-  };
+  // Sync markers
+  useEffect(() => {
+    const map = mapRef.current;
+    const L = layersRef.current.L;
+    if (!map || !L || !ready) return;
+    const makeIcon = (label: string, bg: string) => L.divIcon({
+      className: "",
+      html: `<div style="background:${bg};color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);border:2px solid white">${label}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+    });
+    if (layersRef.current.a) { map.removeLayer(layersRef.current.a); layersRef.current.a = null; }
+    if (layersRef.current.b) { map.removeLayer(layersRef.current.b); layersRef.current.b = null; }
+    if (layersRef.current.line) { map.removeLayer(layersRef.current.line); layersRef.current.line = null; }
+    if (pickup) layersRef.current.a = L.marker([pickup.lat, pickup.lng], { icon: makeIcon("A", "hsl(160 84% 39%)") }).addTo(map);
+    if (dropoff) layersRef.current.b = L.marker([dropoff.lat, dropoff.lng], { icon: makeIcon("B", "hsl(38 92% 50%)") }).addTo(map);
+    if (pickup && dropoff) {
+      layersRef.current.line = L.polyline(
+        [[pickup.lat, pickup.lng], [dropoff.lat, dropoff.lng]],
+        { color: "#1E3A8A", weight: 3, dashArray: "6 6" },
+      ).addTo(map);
+    }
+  }, [pickup?.lat, pickup?.lng, dropoff?.lat, dropoff?.lng, ready]);
 
-  return (
-    <div style={{ height }} className="overflow-hidden rounded-2xl border border-border">
-      <MapContainer center={[center.lat, center.lng]} zoom={12} style={{ height: "100%", width: "100%" }}>
-        <TileLayer attribution='&copy; OpenStreetMap' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        <ClickHandler onClick={handleClick} />
-        {pickup && <Marker position={[pickup.lat, pickup.lng]} icon={iconA} />}
-        {dropoff && <Marker position={[dropoff.lat, dropoff.lng]} icon={iconB} />}
-        {pickup && dropoff && (
-          <Polyline positions={[[pickup.lat, pickup.lng], [dropoff.lat, dropoff.lng]]} pathOptions={{ color: "#1E3A8A", weight: 3, dashArray: "6 6" }} />
-        )}
-      </MapContainer>
-    </div>
-  );
+  return <div ref={containerRef} style={{ height }} className="overflow-hidden rounded-2xl border border-border bg-accent/30" />;
 }

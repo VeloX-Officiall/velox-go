@@ -12,9 +12,45 @@ export function SupportBot() {
   ]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
+  // Position: distance from top-left corner; default to bottom-right
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const draggingRef = useRef<{ ox: number; oy: number; moved: boolean } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = localStorage.getItem("velox.bot.pos");
+    if (saved) {
+      try { setPos(JSON.parse(saved)); } catch {}
+    } else {
+      setPos({ x: window.innerWidth - 76, y: window.innerHeight - 76 });
+    }
+  }, []);
+
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, open]);
+
+  function onPointerDown(e: React.PointerEvent) {
+    if (!pos) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    draggingRef.current = { ox: e.clientX - pos.x, oy: e.clientY - pos.y, moved: false };
+  }
+  function onPointerMove(e: React.PointerEvent) {
+    const d = draggingRef.current;
+    if (!d) return;
+    d.moved = true;
+    const x = Math.min(Math.max(0, e.clientX - d.ox), window.innerWidth - 56);
+    const y = Math.min(Math.max(0, e.clientY - d.oy), window.innerHeight - 56);
+    setPos({ x, y });
+  }
+  function onPointerUp(e: React.PointerEvent) {
+    const d = draggingRef.current;
+    draggingRef.current = null;
+    if (d?.moved && pos) {
+      localStorage.setItem("velox.bot.pos", JSON.stringify(pos));
+    } else {
+      setOpen((v) => !v);
+    }
+  }
 
   async function send() {
     const t = text.trim();
@@ -27,21 +63,32 @@ export function SupportBot() {
       const { data, error } = await supabase.functions.invoke("ai-support", { body: { messages: next } });
       if (error) throw error;
       setMsgs((m) => [...m, { role: "assistant", content: data.reply || "..." }]);
-    } catch (e: any) {
+    } catch {
       setMsgs((m) => [...m, { role: "assistant", content: "Bağışlayın, hazırda cavab verə bilmirəm." }]);
     } finally {
       setBusy(false);
     }
   }
 
+  if (!pos) return null;
+
+  // Panel position: above-left of button when there's room
+  const panelStyle: React.CSSProperties = {
+    left: Math.min(pos.x, window.innerWidth - 360),
+    top: Math.max(10, pos.y - 480),
+  };
+
   return (
     <>
       <button
-        onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-hero text-primary-foreground shadow-elevated transition hover:scale-105"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        style={{ left: pos.x, top: pos.y, touchAction: "none" }}
+        className="fixed z-50 flex h-14 w-14 cursor-grab items-center justify-center rounded-full bg-gradient-hero text-primary-foreground shadow-elevated transition active:cursor-grabbing"
         aria-label="Dəstək"
       >
-        {open ? <X className="h-6 w-6" /> : <MessageSquare className="h-6 w-6" />}
+        {open ? <X className="pointer-events-none h-6 w-6" /> : <MessageSquare className="pointer-events-none h-6 w-6" />}
       </button>
 
       <AnimatePresence>
@@ -50,7 +97,8 @@ export function SupportBot() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-5 z-50 flex h-[460px] w-[340px] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-elevated"
+            style={panelStyle}
+            className="fixed z-50 flex h-[460px] w-[340px] max-w-[calc(100vw-1.25rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-elevated"
           >
             <div className="flex items-center gap-3 border-b border-border bg-gradient-hero p-4 text-primary-foreground">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20"><Bot className="h-5 w-5" /></div>

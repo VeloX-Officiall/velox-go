@@ -134,6 +134,26 @@ function CustomerDashboard() {
 
         {tab === "explore" && (
           <div className="space-y-5">
+            {user && (
+              <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
+                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">{t("share_post")}</div>
+                <div className="space-y-2">
+                  <Input placeholder={t("title")} value={postForm.title} onChange={(e) => setPostForm({ ...postForm, title: e.target.value })} className="h-10 rounded-xl" />
+                  <Textarea placeholder={t("description")} value={postForm.description} onChange={(e) => setPostForm({ ...postForm, description: e.target.value })} className="min-h-[60px] rounded-xl" />
+                  <Input placeholder={t("address")} value={postForm.location} onChange={(e) => setPostForm({ ...postForm, location: e.target.value })} className="h-10 rounded-xl" />
+                  <Button onClick={async () => {
+                    if (!user || !postForm.title.trim()) return;
+                    const { error } = await supabase.from("posts").insert({
+                      author_id: user.id, author_role: "customer",
+                      title: postForm.title, description: postForm.description || null,
+                      location: postForm.location || null,
+                    });
+                    if (error) toast.error(error.message);
+                    else { toast.success("Paylaşıldı"); setPostForm({ title: "", description: "", location: "" }); loadPosts(); }
+                  }} className="h-10 w-full rounded-xl bg-gradient-hero shadow-glow">{t("create")}</Button>
+                </div>
+              </div>
+            )}
             {posts.length === 0 && (
               <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
                 Hələ paylaşım yoxdur.

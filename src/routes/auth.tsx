@@ -31,6 +31,8 @@ function AuthPage() {
   const [selectedRole, setSelectedRole] = useState<Role>(role);
   const [busy, setBusy] = useState(false);
 
+  const [finCode, setFinCode] = useState("");
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: redirect || roleHome(selectedRole) });
@@ -45,25 +47,36 @@ function AuthPage() {
     await supabase.from("user_roles").insert({ user_id: userId, role: r }).select();
   }
 
+  const isCourier = selectedRole === "courier";
+  const finEmail = (code: string) => `fin${code.trim().toLowerCase()}@velox.app`;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
+      const usedEmail = isCourier ? finEmail(finCode) : email;
+      if (isCourier && !/^[A-Za-z0-9]{6,8}$/.test(finCode)) {
+        throw new Error("FIN kod düzgün deyil (6–8 simvol)");
+      }
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
-          email, password,
+          email: usedEmail, password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: fullName, role: selectedRole },
+            data: { full_name: fullName || (isCourier ? `Kuryer ${finCode}` : ""), role: selectedRole },
           },
         });
         if (error) throw error;
-        if (data.user) await ensureRole(data.user.id, selectedRole);
+        if (data.user) {
+          await ensureRole(data.user.id, selectedRole);
+          if (isCourier) {
+            await supabase.from("profiles").update({ fin_code: finCode.toUpperCase() }).eq("id", data.user.id);
+          }
+        }
         toast.success("Hesab yaradıldı! Daxil olursunuz...");
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email: usedEmail, password });
         if (error) throw error;
-        // ensure a role exists for old accounts
         const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user!.id);
         if (!roles || roles.length === 0) await ensureRole(data.user!.id, selectedRole);
         toast.success("Xoş gəldiniz!");

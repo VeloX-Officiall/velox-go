@@ -151,28 +151,40 @@ function AuthPage() {
             {mode === "signup" && (
               <Input placeholder="Ad Soyad" value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-11 rounded-xl" />
             )}
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input type="email" required placeholder="E-poçt" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 rounded-xl pl-9" />
-            </div>
+            {isCourier ? (
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input required minLength={6} maxLength={8} placeholder="FIN Kod (məs. 5XB1234)"
+                  value={finCode} onChange={(e) => setFinCode(e.target.value.toUpperCase())}
+                  className="h-11 rounded-xl pl-9 tracking-widest font-mono uppercase" />
+              </div>
+            ) : (
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input type="email" required placeholder="E-poçt" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 rounded-xl pl-9" />
+              </div>
+            )}
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input type="password" required minLength={6} placeholder="Şifrə (min 6)" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 rounded-xl pl-9" />
             </div>
-            <Button type="submit" disabled={busy} className="h-11 w-full rounded-xl bg-gradient-hero text-base font-bold">
+            <Button type="submit" disabled={busy} className="h-11 w-full rounded-xl bg-gradient-hero text-base font-bold shadow-glow">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : mode === "login" ? "Daxil ol" : "Qeydiyyatdan keç"}
             </Button>
           </form>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            və ya
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <Button type="button" variant="outline" disabled={busy} onClick={google} className="h-11 w-full rounded-xl">
-            Google ilə davam et
-          </Button>
+          {!isCourier && (
+            <>
+              <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="h-px flex-1 bg-border" />
+                və ya
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <Button type="button" variant="outline" disabled={busy} onClick={google} className="h-11 w-full rounded-xl">
+                Google ilə davam et
+              </Button>
+            </>
+          )}
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
             <Link to="/" className="underline">Ana səhifəyə qayıt</Link>

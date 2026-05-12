@@ -33,7 +33,7 @@ function StoreDashboard() {
   const load = useCallback(async () => {
     if (!user) return;
     const [{ data: rows }, { data: prof }] = await Promise.all([
-      supabase.from("posts").select("*").eq("store_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("posts").select("*").eq("author_id", user.id).order("created_at", { ascending: false }),
       supabase.from("profiles").select("verified").eq("id", user.id).maybeSingle(),
     ]);
     setPosts((rows as Post[]) || []);
@@ -46,7 +46,7 @@ function StoreDashboard() {
     if (!user || !postForm.title.trim()) return;
     const tags = postForm.tags.split(",").map((s) => s.trim().replace(/^#/, "")).filter(Boolean);
     const { error } = await supabase.from("posts").insert({
-      store_id: user.id,
+      author_id: user.id,
       title: postForm.title,
       description: postForm.description || null,
       tags,

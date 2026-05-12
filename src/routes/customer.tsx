@@ -21,7 +21,7 @@ export const Route = createFileRoute("/customer")({
 
 type Post = {
   id: string;
-  store_id: string;
+  author_id: string;
   title: string;
   description: string | null;
   tags: string[] | null;
@@ -54,7 +54,7 @@ function CustomerDashboard() {
       .limit(50);
     if (!rows) return;
     const ids = rows.map((r) => r.id);
-    const storeIds = [...new Set(rows.map((r) => r.store_id))];
+    const storeIds = [...new Set(rows.map((r) => r.author_id))];
     const [{ data: likes }, { data: profs }, { data: myLikes }] = await Promise.all([
       supabase.from("post_likes").select("post_id").in("post_id", ids),
       supabase.from("profiles").select("id, full_name, verified, phone").in("id", storeIds),
@@ -67,7 +67,7 @@ function CustomerDashboard() {
     profs?.forEach((p: any) => profMap.set(p.id, p));
     setPosts(rows.map((r: any) => ({
       ...r,
-      store: profMap.get(r.store_id),
+      store: profMap.get(r.author_id),
       likes_count: likesMap.get(r.id) || 0,
       liked_by_me: mySet.has(r.id),
     })));

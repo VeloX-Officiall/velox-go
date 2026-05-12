@@ -18,8 +18,12 @@ export const Route = createFileRoute("/profile")({
 function ProfilePage() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
-  const [form, setForm] = useState({ full_name: "", phone: "", bio: "", social_url: "", avatar_url: "" });
+  const [form, setForm] = useState({
+    full_name: "", phone: "", bio: "", social_url: "", avatar_url: "",
+    yt_url: "", tt_url: "", ig_url: "", fin_code: "",
+  });
   const [verified, setVerified] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -32,16 +36,37 @@ function ProfilePage() {
           bio: data.bio || "",
           social_url: data.social_url || "",
           avatar_url: data.avatar_url || "",
+          yt_url: (data as any).yt_url || "",
+          tt_url: (data as any).tt_url || "",
+          ig_url: (data as any).ig_url || "",
+          fin_code: (data as any).fin_code || "",
         });
         setVerified(!!data.verified);
       }
     });
+    supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle().then(({ data }) => {
+      setRole(data?.role || null);
+    });
   }, [user?.id]);
+
+  const isCourier = role === "courier";
+  const maskedFin = form.fin_code ? `••••${form.fin_code.slice(-3)}` : "";
 
   async function save() {
     if (!user) return;
     setBusy(true);
-    const { error } = await supabase.from("profiles").update(form).eq("id", user.id);
+    const payload: any = {
+      full_name: form.full_name, phone: form.phone, avatar_url: form.avatar_url,
+    };
+    if (isCourier) {
+      payload.yt_url = form.yt_url || null;
+      payload.tt_url = form.tt_url || null;
+      payload.ig_url = form.ig_url || null;
+    } else {
+      payload.bio = form.bio;
+      payload.social_url = form.social_url || null;
+    }
+    const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
     setBusy(false);
     if (error) toast.error(error.message);
     else toast.success("Profil yeniləndi");
@@ -63,7 +88,10 @@ function ProfilePage() {
                 {form.full_name || "Profil"}
                 {verified && <BadgeCheck className="h-5 w-5 fill-primary text-primary-foreground" />}
               </div>
-              <div className="text-xs text-muted-foreground">{user?.email}</div>
+              <div className="text-xs text-muted-foreground">
+                {isCourier ? `FIN: ${maskedFin}` : user?.email}
+                {role && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase text-primary">{role}</span>}
+              </div>
             </div>
           </div>
 
@@ -80,15 +108,28 @@ function ProfilePage() {
               <label className="mb-1 block text-xs font-semibold text-muted-foreground">Avatar URL</label>
               <Input value={form.avatar_url} onChange={(e) => setForm({ ...form, avatar_url: e.target.value })} className="h-11 rounded-xl" />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("bio")}</label>
-              <Textarea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} className="min-h-[90px] rounded-xl" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("social_link")}</label>
-              <Input value={form.social_url} onChange={(e) => setForm({ ...form, social_url: e.target.value })} placeholder="https://instagram.com/..." className="h-11 rounded-xl" />
-            </div>
-            <Button onClick={save} disabled={busy} className="h-11 w-full rounded-xl bg-gradient-hero">
+
+            {isCourier ? (
+              <>
+                <div className="mt-4 text-xs font-bold uppercase tracking-wider text-primary">{t("links")}</div>
+                <Input value={form.yt_url} onChange={(e) => setForm({ ...form, yt_url: e.target.value })} placeholder={t("yt_url")} className="h-11 rounded-xl" />
+                <Input value={form.tt_url} onChange={(e) => setForm({ ...form, tt_url: e.target.value })} placeholder={t("tt_url")} className="h-11 rounded-xl" />
+                <Input value={form.ig_url} onChange={(e) => setForm({ ...form, ig_url: e.target.value })} placeholder={t("ig_url")} className="h-11 rounded-xl" />
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("bio")}</label>
+                  <Textarea value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} className="min-h-[90px] rounded-xl" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("social_link")}</label>
+                  <Input value={form.social_url} onChange={(e) => setForm({ ...form, social_url: e.target.value })} placeholder="https://instagram.com/..." className="h-11 rounded-xl" />
+                </div>
+              </>
+            )}
+
+            <Button onClick={save} disabled={busy} className="h-11 w-full rounded-xl bg-gradient-hero shadow-glow">
               {t("save")}
             </Button>
           </div>

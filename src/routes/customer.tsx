@@ -40,10 +40,12 @@ function CustomerDashboard() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [pickup, setPickup] = useState<LatLng | null>(null);
   const [dropoff, setDropoff] = useState<LatLng | null>(null);
+  const [routeKm, setRouteKm] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [postForm, setPostForm] = useState({ title: "", description: "", location: "" });
 
-  const distance = pickup && dropoff ? haversineKm(pickup, dropoff) : 0;
+  const distance = routeKm ?? (pickup && dropoff ? haversineKm(pickup, dropoff) : 0);
   const fee = distance > 0 ? calcDeliveryFee(distance) : 0;
 
   const loadPosts = useCallback(async () => {

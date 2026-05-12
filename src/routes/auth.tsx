@@ -31,6 +31,8 @@ function AuthPage() {
   const [selectedRole, setSelectedRole] = useState<Role>(role);
   const [busy, setBusy] = useState(false);
 
+  const [finCode, setFinCode] = useState("");
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) navigate({ to: redirect || roleHome(selectedRole) });
@@ -45,25 +47,36 @@ function AuthPage() {
     await supabase.from("user_roles").insert({ user_id: userId, role: r }).select();
   }
 
+  const isCourier = selectedRole === "courier";
+  const finEmail = (code: string) => `fin${code.trim().toLowerCase()}@velox.app`;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
+      const usedEmail = isCourier ? finEmail(finCode) : email;
+      if (isCourier && !/^[A-Za-z0-9]{6,8}$/.test(finCode)) {
+        throw new Error("FIN kod düzgün deyil (6–8 simvol)");
+      }
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
-          email, password,
+          email: usedEmail, password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: fullName, role: selectedRole },
+            data: { full_name: fullName || (isCourier ? `Kuryer ${finCode}` : ""), role: selectedRole },
           },
         });
         if (error) throw error;
-        if (data.user) await ensureRole(data.user.id, selectedRole);
+        if (data.user) {
+          await ensureRole(data.user.id, selectedRole);
+          if (isCourier) {
+            await supabase.from("profiles").update({ fin_code: finCode.toUpperCase() }).eq("id", data.user.id);
+          }
+        }
         toast.success("Hesab yaradıldı! Daxil olursunuz...");
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email: usedEmail, password });
         if (error) throw error;
-        // ensure a role exists for old accounts
         const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user!.id);
         if (!roles || roles.length === 0) await ensureRole(data.user!.id, selectedRole);
         toast.success("Xoş gəldiniz!");
@@ -138,28 +151,40 @@ function AuthPage() {
             {mode === "signup" && (
               <Input placeholder="Ad Soyad" value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-11 rounded-xl" />
             )}
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input type="email" required placeholder="E-poçt" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 rounded-xl pl-9" />
-            </div>
+            {isCourier ? (
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input required minLength={6} maxLength={8} placeholder="FIN Kod (məs. 5XB1234)"
+                  value={finCode} onChange={(e) => setFinCode(e.target.value.toUpperCase())}
+                  className="h-11 rounded-xl pl-9 tracking-widest font-mono uppercase" />
+              </div>
+            ) : (
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input type="email" required placeholder="E-poçt" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 rounded-xl pl-9" />
+              </div>
+            )}
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input type="password" required minLength={6} placeholder="Şifrə (min 6)" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 rounded-xl pl-9" />
             </div>
-            <Button type="submit" disabled={busy} className="h-11 w-full rounded-xl bg-gradient-hero text-base font-bold">
+            <Button type="submit" disabled={busy} className="h-11 w-full rounded-xl bg-gradient-hero text-base font-bold shadow-glow">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : mode === "login" ? "Daxil ol" : "Qeydiyyatdan keç"}
             </Button>
           </form>
 
-          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-            <div className="h-px flex-1 bg-border" />
-            və ya
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <Button type="button" variant="outline" disabled={busy} onClick={google} className="h-11 w-full rounded-xl">
-            Google ilə davam et
-          </Button>
+          {!isCourier && (
+            <>
+              <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="h-px flex-1 bg-border" />
+                və ya
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              <Button type="button" variant="outline" disabled={busy} onClick={google} className="h-11 w-full rounded-xl">
+                Google ilə davam et
+              </Button>
+            </>
+          )}
 
           <p className="mt-4 text-center text-xs text-muted-foreground">
             <Link to="/" className="underline">Ana səhifəyə qayıt</Link>

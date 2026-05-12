@@ -1,51 +1,54 @@
-## VeloX – Backend Integration & Full Functionality
+# VeloX – Qara/Luks Dizayn + Funksional Yeniləmələr
 
-Large multi-phase build. Delivered in 4 phases with checkpoints.
+## 1. Vizual Yenidən Dizayn (Qara + Luks Mavi)
+- `src/styles.css` tokenlərini yenilə: `--background` qara (oklch 0.12 0 0), `--foreground` ağ, `--card` tünd boz, `--primary` luks elektrik mavi (oklch 0.62 0.22 255), `--primary-glow` parlaq mavi, `--gradient-hero` mavi gradient, gümüş kənar (`--border` az parlaq).
+- Bütün düymələr: gradient mavi + soft glow shadow (`--shadow-glow`).
+- Kartlar: tünd background, nazik mavi border-on-hover.
+- AppHeader, landing, dashboards yoxlanır ki, hardcoded ağ/açıq rəng qalmasın (semantic token-lərdən istifadə).
 
-### Phase 1 — Cleanup & Neutrality (frontend only)
-- Strip "Baku / Khachmaz / Azerbaijan" mentions from landing, header, footer, about page.
-- Remove any remaining placeholder stats / hardcoded city names in courier/store/customer mock data (replace with neutral labels like "Şəhər mərkəzi", "Mağaza ünvanı").
-- Pricing copy stays in AZN (currency unit, not geography).
+## 2. Xəritə – Wolt üslubu marşrut xətti
+- `MapPicker.tsx` üzərində: A və B pin-ləri seçildikdə OSRM public demo (`https://router.project-osrm.org/route/v1/driving/...`) ilə real yol marşrutu çəkilir, `<Polyline>` mavi luks rənglə + glow.
+- Məsafə avtomatik hesablanır (driving distance), `customer.tsx`-ə ötürülür → `calcDeliveryFee`.
+- Tile layer: tünd Carto "dark_all" (`https://{s}.basemaps.cartocdn.com/dark_all/...`) qara temaya uyğun.
 
-### Phase 2 — Lovable Cloud + Auth + Schema
-Enable Lovable Cloud, then create schema:
+## 3. FIN Kod ilə Kuryer Girişi
+- `profiles`-ə `fin_code text` sütunu əlavə (migration).
+- `auth.tsx`-də Kuryer rolu seçildikdə, e-poçt+şifrə əvəzinə "FIN kod + şifrə" formu göstərilir. FIN saxlanılır profile-də (maskalanır UI-da: `*****1234`).
+- Texniki: signup vaxtı sintetik email yaradılır `fin{code}@velox.app`, profile-ə `fin_code` yazılır. Login: profil id-ni FIN-dən tapıb həmin email ilə `signInWithPassword`.
 
-```text
-profiles(id uuid PK → auth.users, full_name, phone, avatar_url, created_at)
-app_role enum: 'courier' | 'store' | 'customer'
-user_roles(id, user_id, role)  + has_role() SECURITY DEFINER
-posts(id, store_id, title, description, tags[], image_url, location, created_at)
-post_likes(id, post_id, user_id, UNIQUE(post_id,user_id))
-post_comments(id, post_id, user_id, body, created_at)
-orders(id, customer_id, courier_id, store_id, pickup_lat/lng, drop_lat/lng,
-       distance_km, fee_azn, status, note, created_at)
-conversations(id, user_a, user_b, UNIQUE pair)
-messages(id, conversation_id, sender_id, body, created_at)
-courier_wallet(user_id PK, balance_azn, day_pass_until)
-```
+## 4. Kuryer Balans Artırma
+- `courier.tsx`-də "Balans artır" düyməsi → modal (məbləğ daxil et). 
+- Hələlik manual: `courier_wallet.balance_azn += amount` (real ödəniş gec mərhələdə). 1 AZN günlük gediş haqqı balansdan çıxılır (cron sonra).
 
-RLS on all tables. `_authenticated` layout route guards `/courier`, `/store`, `/customer`. Landing role buttons → `/auth?role=…`. After login, redirect to that role's dashboard. `/auth` page: email+password + Google.
+## 5. Profil və Paylaşımlar – Rola görə
+- `posts` cədvəlində RLS artıq store rolunu məcbur edir. Customer-lərin də paylaşımı üçün:
+  - `posts.store_id` → `posts.author_id`-yə adlandırma (ALTER COLUMN RENAME) və INSERT policy: `auth.uid() = author_id AND (has_role(uid,'store') OR has_role(uid,'customer'))`. Kuryerlərə INSERT bağlı.
+  - `customer.tsx` və `store.tsx`-də "Paylaşım yarat" formu (başlıq, təsvir, şəkil URL).
+- `profile.tsx`:
+  - Kuryer üçün: yalnız YouTube/TikTok/Instagram link sahələri (`yt_url`, `tt_url`, `ig_url` columns əlavə, ya da mövcud `social_url` array-ə dəyişdir → JSONB).
+  - Mağaza/Müştəri: bio + paylaşımlar siyahısı.
 
-### Phase 3 — Real pricing + Social + DMs
-- Pricing already lives in `src/lib/pricing.ts` (Haversine + tiers). Wire "Get Anything" to compute fee from real A/B coords (click-to-place pins on a Leaflet map; or two coord inputs as fallback). Server function recomputes fee before insert.
-- Feed: posts loaded from `posts` table; like/comment buttons write to `post_likes`/`post_comments` with optimistic UI; counts update via Supabase Realtime.
-- DM: `/messages` route lists conversations; thread view subscribes to Realtime on `messages`. "Mesaj" buttons on store cards / courier list / customer order open a DM with that user.
+## 6. Like + Şərh + DM
+- Hazırda `post_likes`/`post_comments` mövcuddur. Feed komponentinə real-time count + comment input əlavə (customer.tsx, store.tsx).
+- DM (`/messages`) hər kəs üçün açıq – var. "Mesaj" düyməsi profile/post yanında konversasiya yaradır.
 
-### Phase 4 — AI Support Bot + Audit dead buttons
-- `src/components/SupportBot.tsx` — floating button bottom-right on every page (mounted in `__root.tsx`). Chat panel calls server fn `aiSupport` → Lovable AI Gateway (`google/gemini-3-flash-preview`) with system prompt encoding VeloX rules (1 AZN daily pass, 0% commission, tiered pricing).
-- Sweep every existing button: every onClick must navigate, mutate, or open a modal — no dead buttons.
+## 7. "Hazırdır" düyməsinin qorunması
+- `orders` cədvəlinə `ready_at timestamptz`. Mağaza yalnız əmin olanda "Hazırdır" basır → status `ready`. Kuryer feed yalnız `status='ready'` sifarişləri göstərir. UI-da "Yalnız mal hazır olanda basın!" xəbərdarlığı + təsdiq dialog.
 
-### Technical notes
-- Roles in separate `user_roles` table + `has_role()` to avoid RLS recursion.
-- Pricing recomputed server-side in `createOrder` server fn; never trust client fee.
-- Realtime: enable replication on `messages`, `post_likes`, `post_comments`.
-- AI gateway via `createServerFn` reading `LOVABLE_API_KEY` inside `.handler()`.
-- Maps: `leaflet` + `react-leaflet` with OpenStreetMap tiles (no API key).
+## 8. i18n – Tam tərcümə
+- `i18n.ts`-də az/en/ru üçün bütün yeni açarları tamamla: fin_code, top_up, balance, ready_warning, route_distance, posts_compose, link_youtube, link_tiktok, link_instagram və s. Hardcoded mətnləri komponentlərdən `t()`-yə keçir.
 
-### Delivery order
-1. Phase 1 (quick cleanup) — ship immediately.
-2. Phase 2 (Cloud + auth + schema) — checkpoint, test login flow.
-3. Phase 3 (pricing UI + likes/comments + DM).
-4. Phase 4 (SupportBot + dead-button audit).
+## Texniki Qeydlər
+- Migration: `ALTER TABLE posts RENAME COLUMN store_id TO author_id`, drop+recreate INSERT policy, add `posts.author_role`. ALTER profiles ADD `fin_code text unique`, `yt_url`, `tt_url`, `ig_url`. ALTER orders ADD `ready_at timestamptz`.
+- OSRM public server rate-limited; məqbul MVP üçün. Sonra self-host.
+- FIN kod 7 rəqəm validasiya (AZ standart).
 
-Reply "go" to start with Phase 1+2, or tell me to reorder/skip phases.
+## Çatdırılma sırası
+1. Migration (schema dəyişiklikləri)
+2. Dizayn tokenləri + tünd Carto map
+3. OSRM marşrut + customer pricing
+4. FIN auth + balans modal
+5. Posts rola görə + profile rol-spesifik sahələr
+6. Ready guard + i18n təmizliyi
+
+Təsdiq üçün "davam" yazın.

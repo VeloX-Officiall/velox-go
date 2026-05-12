@@ -103,6 +103,7 @@ export type Database = {
           pickup_label: string | null
           pickup_lat: number | null
           pickup_lng: number | null
+          ready_at: string | null
           status: string
           store_id: string | null
         }
@@ -120,6 +121,7 @@ export type Database = {
           pickup_label?: string | null
           pickup_lat?: number | null
           pickup_lng?: number | null
+          ready_at?: string | null
           status?: string
           store_id?: string | null
         }
@@ -137,6 +139,7 @@ export type Database = {
           pickup_label?: string | null
           pickup_lat?: number | null
           pickup_lng?: number | null
+          ready_at?: string | null
           status?: string
           store_id?: string | null
         }
@@ -205,32 +208,35 @@ export type Database = {
       }
       posts: {
         Row: {
+          author_id: string
+          author_role: string
           created_at: string
           description: string | null
           id: string
           image_url: string | null
           location: string | null
-          store_id: string
           tags: string[] | null
           title: string
         }
         Insert: {
+          author_id: string
+          author_role?: string
           created_at?: string
           description?: string | null
           id?: string
           image_url?: string | null
           location?: string | null
-          store_id: string
           tags?: string[] | null
           title: string
         }
         Update: {
+          author_id?: string
+          author_role?: string
           created_at?: string
           description?: string | null
           id?: string
           image_url?: string | null
           location?: string | null
-          store_id?: string
           tags?: string[] | null
           title?: string
         }
@@ -241,31 +247,43 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          fin_code: string | null
           full_name: string | null
           id: string
+          ig_url: string | null
           phone: string | null
           social_url: string | null
+          tt_url: string | null
           verified: boolean
+          yt_url: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          fin_code?: string | null
           full_name?: string | null
           id: string
+          ig_url?: string | null
           phone?: string | null
           social_url?: string | null
+          tt_url?: string | null
           verified?: boolean
+          yt_url?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          fin_code?: string | null
           full_name?: string | null
           id?: string
+          ig_url?: string | null
           phone?: string | null
           social_url?: string | null
+          tt_url?: string | null
           verified?: boolean
+          yt_url?: string | null
         }
         Relationships: []
       }

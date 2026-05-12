@@ -210,7 +210,9 @@ function CustomerDashboard() {
               <div className="text-xs font-semibold text-muted-foreground">
                 {!pickup ? t("click_map_pickup") : !dropoff ? t("click_map_dropoff") : `${distance.toFixed(2)} km`}
               </div>
-              <MapPicker pickup={pickup} dropoff={dropoff} onChange={({ pickup, dropoff }) => { setPickup(pickup); setDropoff(dropoff); }} />
+              <MapPicker pickup={pickup} dropoff={dropoff}
+                onChange={({ pickup, dropoff }) => { setPickup(pickup); setDropoff(dropoff); setRouteKm(null); }}
+                onRouteDistance={(km) => setRouteKm(km)} />
               {(pickup || dropoff) && (
                 <button onClick={() => { setPickup(null); setDropoff(null); }} className="text-xs font-semibold text-primary underline">
                   {t("reset_pins")}

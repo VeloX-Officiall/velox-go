@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Wallet, Plus, MapPin, Lock, Send, Users, Clock, Package } from "lucide-react";
@@ -7,38 +7,98 @@ import "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-import { RequireAuth } from "@/lib/auth";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { RequireAuth, useAuthSession } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/courier")({
   head: () => ({ meta: [{ title: "Courier · VeloX" }] }),
   component: () => <RequireAuth><CourierDashboard /></RequireAuth>,
 });
 
-const sampleOrders = [
-  { id: 1, store: "Bravo Market", from: "Nizami küç. 23", to: "Yasamal, Həsən bəy 14", price: "8 AZN", dist: "2.4 km" },
-  { id: 2, store: "Aptek Plus", from: "28 May metro", to: "Nərimanov, Atatürk 88", price: "5 AZN", dist: "3.1 km" },
-  { id: 3, store: "Pizza Inn", from: "Fountain Square", to: "Sahil bağı", price: "12 AZN", dist: "1.2 km" },
-  { id: 4, store: "Çiçək Evi", from: "İçərişəhər", to: "Xətai r., Babək pr.", price: "10 AZN", dist: "4.6 km" },
-];
+type Order = {
+  id: string; pickup_label: string | null; drop_label: string | null;
+  distance_km: number | null; fee_azn: number | null; status: string;
+  store_id: string | null; customer_id: string;
+};
 
 function CourierDashboard() {
   const { t } = useTranslation();
-  const [balance, setBalance] = useState(4.5);
+  const { user } = useAuthSession();
+  const [balance, setBalance] = useState(0);
   const [dayActive, setDayActive] = useState(false);
   const [endsAt, setEndsAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState("5");
 
+  const loadWallet = useCallback(async () => {
+    if (!user) return;
+    let { data } = await supabase.from("courier_wallet").select("*").eq("user_id", user.id).maybeSingle();
+    if (!data) {
+      await supabase.from("courier_wallet").insert({ user_id: user.id, balance_azn: 0 });
+      data = { user_id: user.id, balance_azn: 0, day_pass_until: null, updated_at: new Date().toISOString() } as any;
+    }
+    setBalance(Number(data!.balance_azn) || 0);
+    if (data!.day_pass_until) {
+      const t = new Date(data!.day_pass_until).getTime();
+      if (t > Date.now()) { setDayActive(true); setEndsAt(t); } else { setDayActive(false); setEndsAt(null); }
+    }
+  }, [user?.id]);
+
+  const loadOrders = useCallback(async () => {
+    const { data } = await supabase
+      .from("orders").select("*")
+      .in("status", ["ready", "pending"])
+      .is("courier_id", null)
+      .order("created_at", { ascending: false }).limit(30);
+    setOrders((data as Order[]) || []);
+  }, []);
+
+  useEffect(() => { loadWallet(); loadOrders(); }, [loadWallet, loadOrders]);
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
+  useEffect(() => {
+    const ch = supabase.channel("courier-orders")
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => loadOrders())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [loadOrders]);
 
-  const startDay = () => {
-    if (balance < 1) return;
-    setBalance((b) => +(b - 1).toFixed(2));
-    setDayActive(true);
-    setEndsAt(Date.now() + 24 * 3600 * 1000);
+  const startDay = async () => {
+    if (!user || balance < 1) { toast.error("Balans kifayət deyir, ən az 1 AZN gərək"); return; }
+    const until = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+    const newBal = +(balance - 1).toFixed(2);
+    const { error } = await supabase.from("courier_wallet")
+      .update({ balance_azn: newBal, day_pass_until: until }).eq("user_id", user.id);
+    if (error) { toast.error(error.message); return; }
+    setBalance(newBal); setDayActive(true); setEndsAt(Date.now() + 24 * 3600 * 1000);
+    toast.success("Gün başladı! 24 saat aktivsiniz.");
+  };
+
+  const topUp = async () => {
+    if (!user) return;
+    const amt = parseFloat(topUpAmount);
+    if (!Number.isFinite(amt) || amt <= 0) { toast.error("Düzgün məbləğ daxil edin"); return; }
+    const newBal = +(balance + amt).toFixed(2);
+    const { error } = await supabase.from("courier_wallet").update({ balance_azn: newBal }).eq("user_id", user.id);
+    if (error) { toast.error(error.message); return; }
+    setBalance(newBal); setTopUpOpen(false);
+    toast.success(`+${amt} AZN əlavə olundu`);
+  };
+
+  const acceptOrder = async (o: Order) => {
+    if (!user) return;
+    if (!dayActive) { toast.error("Əvvəl günü başladın"); return; }
+    const { error } = await supabase.from("orders")
+      .update({ courier_id: user.id, status: "accepted" }).eq("id", o.id).is("courier_id", null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Sifariş götürüldü");
+    loadOrders();
   };
 
   const hoursLeft = endsAt ? Math.max(0, Math.ceil((endsAt - now) / 3600_000)) : 0;
@@ -49,11 +109,8 @@ function CourierDashboard() {
       <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {/* Daily Pass */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
-          >
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
             <div className={`relative p-6 ${dayActive ? "bg-gradient-success text-success-foreground" : "bg-gradient-hero text-primary-foreground"}`}>
               <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
               <div className="relative flex flex-wrap items-center justify-between gap-4">
@@ -68,11 +125,8 @@ function CourierDashboard() {
                     <Clock className="h-4 w-4" /> {hoursLeft}h
                   </div>
                 ) : (
-                  <Button
-                    onClick={startDay}
-                    disabled={balance < 1}
-                    className="h-12 gap-2 rounded-xl bg-white px-6 text-base font-bold text-primary hover:bg-white/90"
-                  >
+                  <Button onClick={startDay} disabled={balance < 1}
+                    className="h-12 gap-2 rounded-xl bg-white px-6 text-base font-bold text-primary hover:bg-white/90">
                     <Play className="h-5 w-5 fill-current" />
                     {t("start_day")}
                   </Button>
@@ -89,12 +143,8 @@ function CourierDashboard() {
                   <div className="text-xl font-bold">{balance.toFixed(2)} AZN</div>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setBalance((b) => +(b + 5).toFixed(2))}
-                className="h-11 gap-2 rounded-xl"
-              >
-                <Plus className="h-4 w-4" /> {t("top_up")} 5
+              <Button onClick={() => setTopUpOpen(true)} className="h-11 gap-2 rounded-xl bg-gradient-hero shadow-glow">
+                <Plus className="h-4 w-4" /> {t("top_up_balance")}
               </Button>
             </div>
           </motion.div>
@@ -107,30 +157,32 @@ function CourierDashboard() {
                 {t("orders_nearby")}
               </h2>
               {!dayActive && (
-                <span className="flex items-center gap-1.5 rounded-full bg-warning/15 px-3 py-1 text-xs font-semibold text-warning-foreground">
+                <span className="flex items-center gap-1.5 rounded-full bg-warning/15 px-3 py-1 text-xs font-semibold text-warning">
                   <Lock className="h-3.5 w-3.5" /> {t("orders_locked")}
                 </span>
               )}
             </div>
             <div className={`relative grid gap-3 ${!dayActive ? "pointer-events-none" : ""}`}>
-              {sampleOrders.map((o) => (
-                <div
-                  key={o.id}
-                  className={`flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition ${!dayActive ? "blur-sm" : "hover:border-primary/40"}`}
-                >
+              {orders.length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">{t("no_pending")}</p>
+              )}
+              {orders.map((o) => (
+                <div key={o.id}
+                  className={`flex items-center justify-between gap-4 rounded-xl border border-border bg-background p-4 transition ${!dayActive ? "blur-sm" : "hover:border-primary/40 hover:shadow-glow"}`}>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-semibold">{o.store}</span>
-                      <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-medium text-primary">{o.dist}</span>
+                      <span className="font-semibold">#{o.id.slice(0, 6)}</span>
+                      {o.distance_km && <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-medium text-primary">{o.distance_km} km</span>}
+                      {o.status === "ready" && <span className="rounded-full bg-success/20 px-2 py-0.5 text-[11px] font-bold text-success">{t("ready")}</span>}
                     </div>
                     <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                      <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-success" /> {o.from}</div>
-                      <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-warning" /> {o.to}</div>
+                      <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-success" /> {o.pickup_label || `${o.pickup_label ?? "A"}`}</div>
+                      <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-warning" /> {o.drop_label || "B"}</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-success">{o.price}</div>
-                    <Button size="sm" className="mt-2 rounded-lg">Götür</Button>
+                    <div className="text-xl font-bold text-success">{o.fee_azn ? `${o.fee_azn} AZN` : "—"}</div>
+                    <Button size="sm" onClick={() => acceptOrder(o)} className="mt-2 rounded-lg">Götür</Button>
                   </div>
                 </div>
               ))}
@@ -146,9 +198,30 @@ function CourierDashboard() {
           </div>
         </div>
 
-        {/* Brotherhood Chat */}
         <BrotherhoodChat />
       </main>
+
+      <Dialog open={topUpOpen} onOpenChange={setTopUpOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{t("top_up_balance")}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-muted-foreground">{t("amount")} (AZN)</label>
+            <Input type="number" min="1" step="0.5" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)} className="h-11 rounded-xl" />
+            <div className="flex gap-2">
+              {[1, 5, 10, 20].map((v) => (
+                <button key={v} onClick={() => setTopUpAmount(String(v))}
+                  className="flex-1 rounded-lg border border-border py-2 text-sm font-semibold hover:border-primary">
+                  {v} AZN
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTopUpOpen(false)}>{t("cancel")}</Button>
+            <Button onClick={topUp} className="bg-gradient-hero shadow-glow">{t("confirm")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

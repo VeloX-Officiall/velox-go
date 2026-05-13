@@ -81,9 +81,10 @@ function AuthPage() {
         if (error) throw error;
         if (data.user) {
           await ensureRole(data.user.id, selectedRole);
-          const update: Record<string, string | null> = { username: u };
-          if (isCourier) update.fin_code = finCode.toUpperCase();
-          await supabase.from("profiles").update(update).eq("id", data.user.id);
+          await supabase.from("profiles").update({
+            username: u,
+            ...(isCourier ? { fin_code: finCode.toUpperCase() } : {}),
+          }).eq("id", data.user.id);
         }
         toast.success(t("account_created"));
       } else {

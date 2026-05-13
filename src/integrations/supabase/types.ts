@@ -35,6 +35,27 @@ export type Database = {
         }
         Relationships: []
       }
+      courier_chat: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       courier_wallet: {
         Row: {
           balance_azn: number

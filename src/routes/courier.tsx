@@ -7,10 +7,11 @@ import "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CardCheckout } from "@/components/CardCheckout";
+import { usePresenceHeartbeat, useOnlineCount } from "@/lib/usePresence";
 
 export const Route = createFileRoute("/courier")({
   head: () => ({ meta: [{ title: "Courier · VeloX" }] }),
@@ -26,6 +27,7 @@ type Order = {
 function CourierDashboard() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
+  usePresenceHeartbeat();
   const [balance, setBalance] = useState(0);
   const [dayActive, setDayActive] = useState(false);
   const [endsAt, setEndsAt] = useState<number | null>(null);
@@ -33,18 +35,19 @@ function CourierDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState("5");
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   const loadWallet = useCallback(async () => {
     if (!user) return;
     let { data } = await supabase.from("courier_wallet").select("*").eq("user_id", user.id).maybeSingle();
     if (!data) {
       await supabase.from("courier_wallet").insert({ user_id: user.id, balance_azn: 0 });
-      data = { user_id: user.id, balance_azn: 0, day_pass_until: null, updated_at: new Date().toISOString() } as any;
+      data = { user_id: user.id, balance_azn: 0, day_pass_until: null, updated_at: new Date().toISOString() };
     }
-    setBalance(Number(data!.balance_azn) || 0);
-    if (data!.day_pass_until) {
-      const t = new Date(data!.day_pass_until).getTime();
-      if (t > Date.now()) { setDayActive(true); setEndsAt(t); } else { setDayActive(false); setEndsAt(null); }
+    setBalance(Number(data.balance_azn) || 0);
+    if (data.day_pass_until) {
+      const ts = new Date(data.day_pass_until).getTime();
+      if (ts > Date.now()) { setDayActive(true); setEndsAt(ts); } else { setDayActive(false); setEndsAt(null); }
     }
   }, [user?.id]);
 
@@ -70,34 +73,44 @@ function CourierDashboard() {
   }, [loadOrders]);
 
   const startDay = async () => {
-    if (!user || balance < 1) { toast.error("Balans kifayət deyir, ən az 1 AZN gərək"); return; }
+    if (!user || balance < 1) { toast.error(t("err_balance_low")); return; }
     const until = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
     const newBal = +(balance - 1).toFixed(2);
     const { error } = await supabase.from("courier_wallet")
       .update({ balance_azn: newBal, day_pass_until: until }).eq("user_id", user.id);
     if (error) { toast.error(error.message); return; }
     setBalance(newBal); setDayActive(true); setEndsAt(Date.now() + 24 * 3600 * 1000);
-    toast.success("Gün başladı! 24 saat aktivsiniz.");
+    toast.success(t("ok_started_day"));
   };
 
-  const topUp = async () => {
+  const finalizeTopUp = async (last4: string) => {
     if (!user) return;
     const amt = parseFloat(topUpAmount);
-    if (!Number.isFinite(amt) || amt <= 0) { toast.error("Düzgün məbləğ daxil edin"); return; }
     const newBal = +(balance + amt).toFixed(2);
     const { error } = await supabase.from("courier_wallet").update({ balance_azn: newBal }).eq("user_id", user.id);
     if (error) { toast.error(error.message); return; }
-    setBalance(newBal); setTopUpOpen(false);
-    toast.success(`+${amt} AZN əlavə olundu`);
+    await supabase.from("transactions").insert({
+      user_id: user.id, amount_azn: amt, status: "success",
+      card_last4: last4, kind: "topup",
+    });
+    setBalance(newBal);
+    toast.success(`+${amt} AZN`);
+  };
+
+  const openCheckout = () => {
+    const amt = parseFloat(topUpAmount);
+    if (!Number.isFinite(amt) || amt <= 0) { toast.error(t("invalid_card")); return; }
+    setTopUpOpen(false);
+    setCheckoutOpen(true);
   };
 
   const acceptOrder = async (o: Order) => {
     if (!user) return;
-    if (!dayActive) { toast.error("Əvvəl günü başladın"); return; }
+    if (!dayActive) { toast.error(t("start_day_first")); return; }
     const { error } = await supabase.from("orders")
       .update({ courier_id: user.id, status: "accepted" }).eq("id", o.id).is("courier_id", null);
     if (error) { toast.error(error.message); return; }
-    toast.success("Sifariş götürüldü");
+    toast.success(t("ok_order_taken"));
     loadOrders();
   };
 
@@ -108,7 +121,6 @@ function CourierDashboard() {
       <AppHeader subtitle={t("courier_dash")} />
       <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          {/* Daily Pass */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
             <div className={`relative p-6 ${dayActive ? "bg-gradient-success text-success-foreground" : "bg-gradient-hero text-primary-foreground"}`}>
@@ -149,7 +161,6 @@ function CourierDashboard() {
             </div>
           </motion.div>
 
-          {/* Orders */}
           <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-lg font-bold">
@@ -176,13 +187,13 @@ function CourierDashboard() {
                       {o.status === "ready" && <span className="rounded-full bg-success/20 px-2 py-0.5 text-[11px] font-bold text-success">{t("ready")}</span>}
                     </div>
                     <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                      <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-success" /> {o.pickup_label || `${o.pickup_label ?? "A"}`}</div>
+                      <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-success" /> {o.pickup_label || "A"}</div>
                       <div className="flex items-start gap-2"><MapPin className="mt-0.5 h-4 w-4 text-warning" /> {o.drop_label || "B"}</div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-xl font-bold text-success">{o.fee_azn ? `${o.fee_azn} AZN` : "—"}</div>
-                    <Button size="sm" onClick={() => acceptOrder(o)} className="mt-2 rounded-lg">Götür</Button>
+                    <Button size="sm" onClick={() => acceptOrder(o)} className="mt-2 rounded-lg">{t("take")}</Button>
                   </div>
                 </div>
               ))}
@@ -201,13 +212,14 @@ function CourierDashboard() {
         <BrotherhoodChat />
       </main>
 
-      <Dialog open={topUpOpen} onOpenChange={setTopUpOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{t("top_up_balance")}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <label className="text-xs font-semibold text-muted-foreground">{t("amount")} (AZN)</label>
+      {/* Top up amount picker */}
+      {topUpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-elevated">
+            <h3 className="mb-4 text-lg font-bold">{t("top_up_balance")}</h3>
+            <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("amount")} (AZN)</label>
             <Input type="number" min="1" step="0.5" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)} className="h-11 rounded-xl" />
-            <div className="flex gap-2">
+            <div className="mt-2 flex gap-2">
               {[1, 5, 10, 20].map((v) => (
                 <button key={v} onClick={() => setTopUpAmount(String(v))}
                   className="flex-1 rounded-lg border border-border py-2 text-sm font-semibold hover:border-primary">
@@ -215,13 +227,16 @@ function CourierDashboard() {
                 </button>
               ))}
             </div>
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setTopUpOpen(false)}>{t("cancel")}</Button>
+              <Button className="flex-1 bg-gradient-hero shadow-glow" onClick={openCheckout}>{t("pay_now")}</Button>
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setTopUpOpen(false)}>{t("cancel")}</Button>
-            <Button onClick={topUp} className="bg-gradient-hero shadow-glow">{t("confirm")}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+
+      <CardCheckout open={checkoutOpen} onOpenChange={setCheckoutOpen}
+        amount={parseFloat(topUpAmount) || 0} onSuccess={finalizeTopUp} />
     </div>
   );
 }
@@ -231,6 +246,7 @@ type ChatMsg = { id: string; user_id: string; body: string; created_at: string }
 function BrotherhoodChat() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
+  const onlineCount = useOnlineCount("courier");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [text, setText] = useState("");
@@ -240,12 +256,12 @@ function BrotherhoodChat() {
   const resolveNames = useCallback(async (ids: string[]) => {
     const missing = ids.filter((id) => id && !(id in names));
     if (missing.length === 0) return;
-    const { data } = await supabase.from("profiles").select("id, full_name").in("id", missing);
+    const { data } = await supabase.from("profiles").select("id, full_name, username").in("id", missing);
     if (data) {
       setNames((prev) => {
         const next = { ...prev };
-        for (const p of data as { id: string; full_name: string | null }[]) {
-          next[p.id] = p.full_name || "Kuryer";
+        for (const p of data as { id: string; full_name: string | null; username: string | null }[]) {
+          next[p.id] = p.full_name || p.username || "—";
         }
         return next;
       });
@@ -256,32 +272,22 @@ function BrotherhoodChat() {
     let cancelled = false;
     (async () => {
       const { data } = await supabase
-        .from("courier_chat")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .limit(100);
+        .from("courier_chat").select("*").order("created_at", { ascending: true }).limit(100);
       if (cancelled || !data) return;
       setMessages(data as ChatMsg[]);
       resolveNames(Array.from(new Set((data as ChatMsg[]).map((m) => m.user_id))));
     })();
-    const ch = supabase
-      .channel("courier-chat")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "courier_chat" },
-        (payload) => {
-          const m = payload.new as ChatMsg;
-          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
-          resolveNames([m.user_id]);
-        },
-      )
+    const ch = supabase.channel("courier-chat")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "courier_chat" }, (payload) => {
+        const m = payload.new as ChatMsg;
+        setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+        resolveNames([m.user_id]);
+      })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
   }, [resolveNames]);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   const send = async () => {
     const body = text.trim();
@@ -301,8 +307,8 @@ function BrotherhoodChat() {
             <Users className="h-5 w-5 text-success" /> {t("brotherhood")}
           </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-success" />
-            142 {t("online_couriers")}
+            <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${onlineCount > 0 ? "bg-success animate-pulse" : "bg-muted-foreground/40"}`} />
+            {onlineCount} {t("online_couriers")}
           </p>
         </div>
       </div>
@@ -311,14 +317,10 @@ function BrotherhoodChat() {
           {messages.map((m) => {
             const mine = m.user_id === user?.id;
             return (
-              <motion.div
-                key={m.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex ${mine ? "justify-end" : "justify-start"}`}
-              >
+              <motion.div key={m.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${mine ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"}`}>
-                  {!mine && <div className="mb-0.5 text-xs font-semibold opacity-70">{names[m.user_id] || "Kuryer"}</div>}
+                  {!mine && <div className="mb-0.5 text-xs font-semibold opacity-70">{names[m.user_id] || "—"}</div>}
                   {m.body}
                 </div>
               </motion.div>
@@ -328,13 +330,9 @@ function BrotherhoodChat() {
         <div ref={endRef} />
       </div>
       <div className="flex gap-2 border-t border-border p-3">
-        <Input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+        <Input value={text} onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder={t("send_message")}
-          className="h-11 rounded-xl"
-        />
+          placeholder={t("send_message")} className="h-11 rounded-xl" />
         <Button onClick={send} className="h-11 rounded-xl px-4">
           <Send className="h-4 w-4" />
         </Button>

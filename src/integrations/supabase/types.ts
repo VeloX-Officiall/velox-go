@@ -238,6 +238,7 @@ export type Database = {
           location: string | null
           tags: string[] | null
           title: string
+          video_url: string | null
         }
         Insert: {
           author_id: string
@@ -249,6 +250,7 @@ export type Database = {
           location?: string | null
           tags?: string[] | null
           title: string
+          video_url?: string | null
         }
         Update: {
           author_id?: string
@@ -260,6 +262,7 @@ export type Database = {
           location?: string | null
           tags?: string[] | null
           title?: string
+          video_url?: string | null
         }
         Relationships: []
       }
@@ -272,9 +275,12 @@ export type Database = {
           full_name: string | null
           id: string
           ig_url: string | null
+          is_online: boolean
+          last_seen_at: string | null
           phone: string | null
           social_url: string | null
           tt_url: string | null
+          username: string | null
           verified: boolean
           yt_url: string | null
         }
@@ -286,9 +292,12 @@ export type Database = {
           full_name?: string | null
           id: string
           ig_url?: string | null
+          is_online?: boolean
+          last_seen_at?: string | null
           phone?: string | null
           social_url?: string | null
           tt_url?: string | null
+          username?: string | null
           verified?: boolean
           yt_url?: string | null
         }
@@ -300,11 +309,44 @@ export type Database = {
           full_name?: string | null
           id?: string
           ig_url?: string | null
+          is_online?: boolean
+          last_seen_at?: string | null
           phone?: string | null
           social_url?: string | null
           tt_url?: string | null
+          username?: string | null
           verified?: boolean
           yt_url?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount_azn: number
+          card_last4: string | null
+          created_at: string
+          id: string
+          kind: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_azn: number
+          card_last4?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_azn?: number
+          card_last4?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          status?: string
+          user_id?: string
         }
         Relationships: []
       }

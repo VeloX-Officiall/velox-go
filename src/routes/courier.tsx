@@ -226,23 +226,70 @@ function CourierDashboard() {
   );
 }
 
+type ChatMsg = { id: string; user_id: string; body: string; created_at: string };
+
 function BrotherhoodChat() {
   const { t } = useTranslation();
-  const [messages, setMessages] = useState([
-    { id: 1, user: "Elvin", text: "Salam qardaşlar, Yasamalda trafik çoxdur 🚦", mine: false },
-    { id: 2, user: "Rauf", text: "28 May tərəfdən gəl, daha rahatdır 👍", mine: false },
-    { id: 3, user: "Sən", text: "Sağ ol, qardaş!", mine: true },
-  ]);
+  const { user } = useAuthSession();
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+
+  const resolveNames = useCallback(async (ids: string[]) => {
+    const missing = ids.filter((id) => id && !(id in names));
+    if (missing.length === 0) return;
+    const { data } = await supabase.from("profiles").select("id, full_name").in("id", missing);
+    if (data) {
+      setNames((prev) => {
+        const next = { ...prev };
+        for (const p of data as { id: string; full_name: string | null }[]) {
+          next[p.id] = p.full_name || "Kuryer";
+        }
+        return next;
+      });
+    }
+  }, [names]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("courier_chat")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .limit(100);
+      if (cancelled || !data) return;
+      setMessages(data as ChatMsg[]);
+      resolveNames(Array.from(new Set((data as ChatMsg[]).map((m) => m.user_id))));
+    })();
+    const ch = supabase
+      .channel("courier-chat")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "courier_chat" },
+        (payload) => {
+          const m = payload.new as ChatMsg;
+          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          resolveNames([m.user_id]);
+        },
+      )
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [resolveNames]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const send = () => {
-    if (!text.trim()) return;
-    setMessages((m) => [...m, { id: Date.now(), user: "Sən", text: text.trim(), mine: true }]);
+  const send = async () => {
+    const body = text.trim();
+    if (!body || !user || sending) return;
+    setSending(true);
+    const { error } = await supabase.from("courier_chat").insert({ user_id: user.id, body });
+    setSending(false);
+    if (error) { toast.error(error.message); return; }
     setText("");
   };
 

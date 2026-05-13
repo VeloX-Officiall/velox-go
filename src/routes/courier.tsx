@@ -308,19 +308,22 @@ function BrotherhoodChat() {
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto p-5">
         <AnimatePresence initial={false}>
-          {messages.map((m) => (
-            <motion.div
-              key={m.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex ${m.mine ? "justify-end" : "justify-start"}`}
-            >
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${m.mine ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"}`}>
-                {!m.mine && <div className="mb-0.5 text-xs font-semibold opacity-70">{m.user}</div>}
-                {m.text}
-              </div>
-            </motion.div>
-          ))}
+          {messages.map((m) => {
+            const mine = m.user_id === user?.id;
+            return (
+              <motion.div
+                key={m.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex ${mine ? "justify-end" : "justify-start"}`}
+              >
+                <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${mine ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"}`}>
+                  {!mine && <div className="mb-0.5 text-xs font-semibold opacity-70">{names[m.user_id] || "Kuryer"}</div>}
+                  {m.body}
+                </div>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
         <div ref={endRef} />
       </div>

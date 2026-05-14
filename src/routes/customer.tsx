@@ -182,7 +182,7 @@ function CustomerDashboard() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 font-semibold">
-                      <span className="truncate">{p.store?.full_name || "Mağaza"}</span>
+                      <span className="truncate">{p.store?.full_name || t(p.author_role === "courier" ? "role_courier" : p.author_role === "customer" ? "role_customer" : "role_store")}</span>
                       {p.store?.verified && <BadgeCheck className="h-4 w-4 fill-primary text-primary-foreground" />}
                     </div>
                     {p.location && <div className="flex items-center gap-1 text-xs text-muted-foreground">

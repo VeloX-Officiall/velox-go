@@ -22,6 +22,7 @@ export const Route = createFileRoute("/customer")({
 type Post = {
   id: string;
   author_id: string;
+  author_role: string;
   title: string;
   description: string | null;
   tags: string[] | null;
@@ -33,10 +34,13 @@ type Post = {
   liked_by_me: boolean;
 };
 
+type FeedFilter = "store" | "customer" | "courier";
+
 function CustomerDashboard() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
   const [tab, setTab] = useState<"explore" | "anything">("explore");
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>("store");
   const [posts, setPosts] = useState<Post[]>([]);
   const [pickup, setPickup] = useState<LatLng | null>(null);
   const [dropoff, setDropoff] = useState<LatLng | null>(null);
@@ -134,7 +138,15 @@ function CustomerDashboard() {
 
         {tab === "explore" && (
           <div className="space-y-5">
-            {user && (
+            <div className="inline-flex w-full rounded-xl border border-border bg-card p-1 shadow-card">
+              {(["store", "customer", "courier"] as FeedFilter[]).map((f) => (
+                <button key={f} onClick={() => setFeedFilter(f)}
+                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition ${feedFilter === f ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground"}`}>
+                  {t(f === "store" ? "role_store" : f === "customer" ? "role_customer" : "role_courier")}
+                </button>
+              ))}
+            </div>
+            {user && feedFilter !== "courier" && (
               <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
                 <div className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">{t("share_post")}</div>
                 <div className="space-y-2">
@@ -154,12 +166,14 @@ function CustomerDashboard() {
                 </div>
               </div>
             )}
-            {posts.length === 0 && (
-              <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
-                Hələ paylaşım yoxdur.
-              </div>
-            )}
-            {posts.map((p) => (
+            {(() => {
+              const filtered = posts.filter((p) => (p.author_role || "store") === feedFilter);
+              if (filtered.length === 0) return (
+                <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+                  {t("no_posts_yet")}
+                </div>
+              );
+              return filtered.map((p) => (
               <motion.article key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
                 <div className="flex items-center gap-3 p-4">
@@ -168,7 +182,7 @@ function CustomerDashboard() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 font-semibold">
-                      <span className="truncate">{p.store?.full_name || "Mağaza"}</span>
+                      <span className="truncate">{p.store?.full_name || t(p.author_role === "courier" ? "role_courier" : p.author_role === "customer" ? "role_customer" : "role_store")}</span>
                       {p.store?.verified && <BadgeCheck className="h-4 w-4 fill-primary text-primary-foreground" />}
                     </div>
                     {p.location && <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -209,7 +223,8 @@ function CustomerDashboard() {
                   </div>
                 </div>
               </motion.article>
-            ))}
+              ));
+            })()}
           </div>
         )}
 

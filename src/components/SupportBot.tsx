@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, X, Send, Bot, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,9 +7,10 @@ import { supabase } from "@/integrations/supabase/client";
 type Msg = { role: "user" | "assistant"; content: string };
 
 export function SupportBot() {
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "assistant", content: "Salam! Mən VeloX dəstək botuyam 🤖 Necə kömək edə bilərəm?" },
+    { role: "assistant", content: t("bot_greeting") },
   ]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -53,18 +55,18 @@ export function SupportBot() {
   }
 
   async function send() {
-    const t = text.trim();
-    if (!t || busy) return;
-    const next = [...msgs, { role: "user" as const, content: t }];
+    const txt = text.trim();
+    if (!txt || busy) return;
+    const next = [...msgs, { role: "user" as const, content: txt }];
     setMsgs(next);
     setText("");
     setBusy(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-support", { body: { messages: next } });
+      const { data, error } = await supabase.functions.invoke("ai-support", { body: { messages: next, language: i18n.language || "az" } });
       if (error) throw error;
       setMsgs((m) => [...m, { role: "assistant", content: data.reply || "..." }]);
     } catch {
-      setMsgs((m) => [...m, { role: "assistant", content: "Bağışlayın, hazırda cavab verə bilmirəm." }]);
+      setMsgs((m) => [...m, { role: "assistant", content: t("bot_unavailable") }]);
     } finally {
       setBusy(false);
     }
@@ -86,7 +88,7 @@ export function SupportBot() {
         onPointerUp={onPointerUp}
         style={{ left: pos.x, top: pos.y, touchAction: "none" }}
         className="fixed z-50 flex h-14 w-14 cursor-grab items-center justify-center rounded-full bg-gradient-hero text-primary-foreground shadow-elevated transition active:cursor-grabbing"
-        aria-label="Dəstək"
+        aria-label={t("bot_label")}
       >
         {open ? <X className="pointer-events-none h-6 w-6" /> : <MessageSquare className="pointer-events-none h-6 w-6" />}
       </button>
@@ -103,8 +105,8 @@ export function SupportBot() {
             <div className="flex items-center gap-3 border-b border-border bg-gradient-hero p-4 text-primary-foreground">
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20"><Bot className="h-5 w-5" /></div>
               <div>
-                <div className="font-bold">VeloX Dəstək</div>
-                <div className="text-xs opacity-80">24/7 AI köməkçi</div>
+                <div className="font-bold">{t("bot_title")}</div>
+                <div className="text-xs opacity-80">{t("bot_subtitle")}</div>
               </div>
             </div>
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -123,7 +125,7 @@ export function SupportBot() {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && send()}
-                placeholder="Sual yazın..."
+                placeholder={t("bot_placeholder")}
                 className="h-10 flex-1 rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
               <button onClick={send} disabled={busy} className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground disabled:opacity-50">

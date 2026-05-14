@@ -166,12 +166,14 @@ function CustomerDashboard() {
                 </div>
               </div>
             )}
-            {posts.length === 0 && (
-              <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
-                Hələ paylaşım yoxdur.
-              </div>
-            )}
-            {posts.map((p) => (
+            {(() => {
+              const filtered = posts.filter((p) => (p.author_role || "store") === feedFilter);
+              if (filtered.length === 0) return (
+                <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+                  {t("no_posts_yet")}
+                </div>
+              );
+              return filtered.map((p) => (
               <motion.article key={p.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
                 <div className="flex items-center gap-3 p-4">
@@ -221,7 +223,8 @@ function CustomerDashboard() {
                   </div>
                 </div>
               </motion.article>
-            ))}
+              ));
+            })()}
           </div>
         )}
 

@@ -22,6 +22,7 @@ export const Route = createFileRoute("/customer")({
 type Post = {
   id: string;
   author_id: string;
+  author_role: string;
   title: string;
   description: string | null;
   tags: string[] | null;
@@ -33,10 +34,13 @@ type Post = {
   liked_by_me: boolean;
 };
 
+type FeedFilter = "store" | "customer" | "courier";
+
 function CustomerDashboard() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
   const [tab, setTab] = useState<"explore" | "anything">("explore");
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>("store");
   const [posts, setPosts] = useState<Post[]>([]);
   const [pickup, setPickup] = useState<LatLng | null>(null);
   const [dropoff, setDropoff] = useState<LatLng | null>(null);
@@ -134,7 +138,15 @@ function CustomerDashboard() {
 
         {tab === "explore" && (
           <div className="space-y-5">
-            {user && (
+            <div className="inline-flex w-full rounded-xl border border-border bg-card p-1 shadow-card">
+              {(["store", "customer", "courier"] as FeedFilter[]).map((f) => (
+                <button key={f} onClick={() => setFeedFilter(f)}
+                  className={`flex-1 rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition ${feedFilter === f ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground"}`}>
+                  {t(f === "store" ? "role_store" : f === "customer" ? "role_customer" : "role_courier")}
+                </button>
+              ))}
+            </div>
+            {user && feedFilter !== "courier" && (
               <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
                 <div className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">{t("share_post")}</div>
                 <div className="space-y-2">

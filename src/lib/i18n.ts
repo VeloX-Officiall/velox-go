@@ -599,15 +599,31 @@ const resources = {
 
 if (!i18n.isInitialized) {
   i18n
-    .use(LanguageDetector)
     .use(initReactI18next)
     .init({
       resources,
+      lng: "az", // deterministic SSR + first client render to avoid hydration mismatch
       fallbackLng: "az",
       supportedLngs: ["az", "tr", "ru", "en"],
       interpolation: { escapeValue: false },
-      detection: { order: ["localStorage", "navigator"], caches: ["localStorage"] },
     });
+  // After hydration, switch to user-preferred language on the client only
+  if (typeof window !== "undefined") {
+    queueMicrotask(() => {
+      try {
+        const saved = localStorage.getItem("velox.lang");
+        const nav = (navigator.language || "az").slice(0, 2).toLowerCase();
+        const lang = saved || (["az", "tr", "ru", "en"].includes(nav) ? nav : "az");
+        if (lang !== i18n.language) i18n.changeLanguage(lang);
+      } catch { /* noop */ }
+    });
+  }
+}
+
+if (typeof window !== "undefined") {
+  i18n.on("languageChanged", (lng) => {
+    try { localStorage.setItem("velox.lang", lng); } catch { /* noop */ }
+  });
 }
 
 export default i18n;

@@ -10,6 +10,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { SupportBot } from "@/components/SupportBot";
+import { BottomNav } from "@/components/BottomNav";
 import { Toaster } from "sonner";
 
 function NotFoundComponent() {

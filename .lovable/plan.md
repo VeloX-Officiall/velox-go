@@ -1,54 +1,88 @@
-# VeloX – Qara/Luks Dizayn + Funksional Yeniləmələr
+## VeloX Super App — Tam Yenidən Qurma Planı
 
-## 1. Vizual Yenidən Dizayn (Qara + Luks Mavi)
-- `src/styles.css` tokenlərini yenilə: `--background` qara (oklch 0.12 0 0), `--foreground` ağ, `--card` tünd boz, `--primary` luks elektrik mavi (oklch 0.62 0.22 255), `--primary-glow` parlaq mavi, `--gradient-hero` mavi gradient, gümüş kənar (`--border` az parlaq).
-- Bütün düymələr: gradient mavi + soft glow shadow (`--shadow-glow`).
-- Kartlar: tünd background, nazik mavi border-on-hover.
-- AppHeader, landing, dashboards yoxlanır ki, hardcoded ağ/açıq rəng qalmasın (semantic token-lərdən istifadə).
+Bu plan kritik bug-fix-ləri və tam yeni naviqasiya/ekran strukturunu Azərbaycan dilində hardcode olunmuş şəkildə tətbiq edir.
 
-## 2. Xəritə – Wolt üslubu marşrut xətti
-- `MapPicker.tsx` üzərində: A və B pin-ləri seçildikdə OSRM public demo (`https://router.project-osrm.org/route/v1/driving/...`) ilə real yol marşrutu çəkilir, `<Polyline>` mavi luks rənglə + glow.
-- Məsafə avtomatik hesablanır (driving distance), `customer.tsx`-ə ötürülür → `calcDeliveryFee`.
-- Tile layer: tünd Carto "dark_all" (`https://{s}.basemaps.cartocdn.com/dark_all/...`) qara temaya uyğun.
+---
 
-## 3. FIN Kod ilə Kuryer Girişi
-- `profiles`-ə `fin_code text` sütunu əlavə (migration).
-- `auth.tsx`-də Kuryer rolu seçildikdə, e-poçt+şifrə əvəzinə "FIN kod + şifrə" formu göstərilir. FIN saxlanılır profile-də (maskalanır UI-da: `*****1234`).
-- Texniki: signup vaxtı sintetik email yaradılır `fin{code}@velox.app`, profile-ə `fin_code` yazılır. Login: profil id-ni FIN-dən tapıb həmin email ilə `signInWithPassword`.
+### 1. Kritik Bug-fix-lər
 
-## 4. Kuryer Balans Artırma
-- `courier.tsx`-də "Balans artır" düyməsi → modal (məbləğ daxil et). 
-- Hələlik manual: `courier_wallet.balance_azn += amount` (real ödəniş gec mərhələdə). 1 AZN günlük gediş haqqı balansdan çıxılır (cron sonra).
+**A. Auth axını (`src/routes/auth.tsx`)**
+- Profil insert-i `handle_new_user` trigger-i tərəfindən idarə olunur — amma trigger `username` və `fin_code` yazmır. Düzəliş: trigger-i yeniləyəcəyik ki, `raw_user_meta_data`-dan `username` və `fin_code` götürsün. Bu, RLS/timing race-lərini aradan qaldırır.
+- Client-də: signup zamanı bütün məlumatları `options.data`-ya ötürmək; sonradan `update` etməmək (race-condition yox).
+- Username unikallığını qeydiyyatdan əvvəl yoxla, error mesajını AZ-də göstər.
 
-## 5. Profil və Paylaşımlar – Rola görə
-- `posts` cədvəlində RLS artıq store rolunu məcbur edir. Customer-lərin də paylaşımı üçün:
-  - `posts.store_id` → `posts.author_id`-yə adlandırma (ALTER COLUMN RENAME) və INSERT policy: `auth.uid() = author_id AND (has_role(uid,'store') OR has_role(uid,'customer'))`. Kuryerlərə INSERT bağlı.
-  - `customer.tsx` və `store.tsx`-də "Paylaşım yarat" formu (başlıq, təsvir, şəkil URL).
-- `profile.tsx`:
-  - Kuryer üçün: yalnız YouTube/TikTok/Instagram link sahələri (`yt_url`, `tt_url`, `ig_url` columns əlavə, ya da mövcud `social_url` array-ə dəyişdir → JSONB).
-  - Mağaza/Müştəri: bio + paylaşımlar siyahısı.
+**B. Qardaşlıq Çat (`src/routes/courier.tsx`)**
+- Form submit handler-də `setBody("")` send-dən ƏVVƏL state-i təmizləmir → optimistik UI yox. Düzəliş: `await supabase.insert` uğurlu olduqdan sonra `setBody("")` çağır, error olarsa toast göstər.
+- Realtime subscription-da event listener `INSERT` filtrini düzgün qur, dublikatları `id` ilə dedupe et.
+- Input-da `disabled={sending}` flag-i əlavə et.
 
-## 6. Like + Şərh + DM
-- Hazırda `post_likes`/`post_comments` mövcuddur. Feed komponentinə real-time count + comment input əlavə (customer.tsx, store.tsx).
-- DM (`/messages`) hər kəs üçün açıq – var. "Mesaj" düyməsi profile/post yanında konversasiya yaradır.
+**C. Tam AZ Lokalizasiya**
+- `src/lib/i18n.ts`-i UI üçün istifadə etməyi DAYANDIR. Bütün route/komponent string-ləri birbaşa AZ-də hardcode et.
+- LanguageSwitcher-i header-dən sil (yalnız AI bot üçün dil seçimi qalsın, daxili setting).
 
-## 7. "Hazırdır" düyməsinin qorunması
-- `orders` cədvəlinə `ready_at timestamptz`. Mağaza yalnız əmin olanda "Hazırdır" basır → status `ready`. Kuryer feed yalnız `status='ready'` sifarişləri göstərir. UI-da "Yalnız mal hazır olanda basın!" xəbərdarlığı + təsdiq dialog.
+---
 
-## 8. i18n – Tam tərcümə
-- `i18n.ts`-də az/en/ru üçün bütün yeni açarları tamamla: fin_code, top_up, balance, ready_warning, route_distance, posts_compose, link_youtube, link_tiktok, link_instagram və s. Hardcoded mətnləri komponentlərdən `t()`-yə keçir.
+### 2. Üst Header (Dinamik) — yeni `AppHeader` komponenti
 
-## Texniki Qeydlər
-- Migration: `ALTER TABLE posts RENAME COLUMN store_id TO author_id`, drop+recreate INSERT policy, add `posts.author_role`. ALTER profiles ADD `fin_code text unique`, `yt_url`, `tt_url`, `ig_url`. ALTER orders ADD `ready_at timestamptz`.
-- OSRM public server rate-limited; məqbul MVP üçün. Sonra self-host.
-- FIN kod 7 rəqəm validasiya (AZ standart).
+```
+┌─────────────────────────────────────────────────────────┐
+│ [📍 Bakı, Nizami küç.]   [Axın | Mağazalar]   [💬 3]   │
+└─────────────────────────────────────────────────────────┘
+```
 
-## Çatdırılma sırası
-1. Migration (schema dəyişiklikləri)
-2. Dizayn tokenləri + tünd Carto map
-3. OSRM marşrut + customer pricing
-4. FIN auth + balans modal
-5. Posts rola görə + profile rol-spesifik sahələr
-6. Ready guard + i18n təmizliyi
+- **Sol**: Müştəri üçün ünvan seçici (modal açılır + MapPicker); Kuryer üçün `Onlayn/Oflayn` toggle (profiles.is_online yazır).
+- **Orta**: Segmented control `Axın | Mağazalar` — route dəyişdirir `/feed` ↔ `/stores` (və ya tab state).
+- **Sağ**: Chat icon + unread badge → `/messages` route-una.
 
-Təsdiq üçün "davam" yazın.
+---
+
+### 3. Alt Naviqasiya — yeni `BottomNav` komponenti (5 tab)
+
+| Tab | Route | Məzmun |
+|-----|-------|--------|
+| 🏠 Axın | `/feed` | Vertikal video swipe feed, sağda Like/Comment/Share/Sifariş et düymələri |
+| 🔍 Kəşfet | `/discover` | Axtarış + 4 kateqoriya grid (Restoranlar, Marketlər, Geyim, Şirniyyat) |
+| ➕ Paylaş | modal | Bottom-sheet: "Video Paylaş" / "Şəkil Paylaş" + Məhsul Adı/Qiymət/Təsvir |
+| 🛍️ Aktivlik | `/activity` | Rol-əsaslı: müştəri → sifariş tracker; kuryer → iş paneli |
+| 👤 Profil | `/profile` | İstifadəçi + VeloX Cüzdan (Balans artır/Nağdlaşdır) |
+
+---
+
+### 4. Database dəyişiklikləri
+
+- `handle_new_user` trigger-ini yeniləmək: `username`, `fin_code` metadata-dan oxusun.
+- `posts` cədvəlinə `price_azn` numeric NULL əlavə et (məhsul qiyməti üçün).
+- `orders` cədvəlinə `post_id` uuid NULL əlavə et (feed-dən sifariş üçün).
+
+---
+
+### 5. Yeni/Dəyişəcək fayllar
+
+**Yeni:**
+- `src/components/AppHeader.tsx` (yenidən yazılır — dinamik)
+- `src/components/BottomNav.tsx`
+- `src/components/ShareSheet.tsx` (paylaş modal)
+- `src/components/AddressSelector.tsx`
+- `src/routes/feed.tsx`
+- `src/routes/discover.tsx`
+- `src/routes/activity.tsx`
+
+**Dəyişəcək:**
+- `src/routes/__root.tsx` — BottomNav-ı bütün auth-lı route-lara əlavə
+- `src/routes/auth.tsx` — signup race-condition fix
+- `src/routes/courier.tsx` — chat send/clear fix
+- `src/routes/profile.tsx` — VeloX Cüzdan bölməsi + Balans artır/Nağdlaşdır
+- `src/routes/customer.tsx` & `store.tsx` — yeni route-lara redirect (legacy)
+- `supabase/migrations/*` — trigger + sütun əlavələri
+
+---
+
+### 6. Texniki qeydlər
+
+- Bütün UI-string-lər AZ-də hardcode (i18n.ts yalnız AI bot üçün).
+- `framer-motion` artıq dependency-dədir, bottom-sheet üçün istifadə.
+- Video feed üçün native `<video>` + `IntersectionObserver` (yeni dependency yox).
+- VeloX Cüzdan "Balans artır" mövcud `CardCheckout` komponentini istifadə edəcək; "Nağdlaşdır" sadəcə transactions cədvəlinə `withdraw` kind ilə insert edəcək (simulyasiya).
+- "Sifariş et" düyməsi feed-də post-dan order yaradır (post_id ilə bağlı).
+
+Plan təsdiqlənsə, hər şeyi tək axında qururam: əvvəl migration, sonra komponentlər və route-lar, sonunda chat/auth düzəlişləri.

@@ -75,17 +75,17 @@ function AuthPage() {
           email: usedEmail, password,
           options: {
             emailRedirectTo: window.location.origin,
-            data: { full_name: fullName || u, role: selectedRole },
+            data: {
+              full_name: fullName || u,
+              role: selectedRole,
+              username: u,
+              ...(isCourier ? { fin_code: finCode.toUpperCase() } : {}),
+            },
           },
         });
         if (error) throw error;
-        if (data.user) {
-          await ensureRole(data.user.id, selectedRole);
-          await supabase.from("profiles").update({
-            username: u,
-            ...(isCourier ? { fin_code: finCode.toUpperCase() } : {}),
-          }).eq("id", data.user.id);
-        }
+        // Trigger handle_new_user writes profile + role from metadata; no manual update needed.
+        if (data.user) await ensureRole(data.user.id, selectedRole);
         toast.success(t("account_created"));
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({ email: usedEmail, password });

@@ -289,14 +289,15 @@ function BrotherhoodChat() {
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const send = async () => {
+  const send = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const body = text.trim();
     if (!body || !user || sending) return;
     setSending(true);
+    setText(""); // clear input immediately (optimistic)
     const { error } = await supabase.from("courier_chat").insert({ user_id: user.id, body });
     setSending(false);
-    if (error) { toast.error(error.message); return; }
-    setText("");
+    if (error) { toast.error(error.message); setText(body); }
   };
 
   return (
@@ -304,11 +305,11 @@ function BrotherhoodChat() {
       <div className="flex items-center justify-between border-b border-border p-5">
         <div>
           <h2 className="flex items-center gap-2 font-bold">
-            <Users className="h-5 w-5 text-success" /> {t("brotherhood")}
+            <Users className="h-5 w-5 text-success" /> Qardaşlıq Çatı
           </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
             <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${onlineCount > 0 ? "bg-success animate-pulse" : "bg-muted-foreground/40"}`} />
-            {onlineCount} {t("online_couriers")}
+            {onlineCount} onlayn kuryer
           </p>
         </div>
       </div>
@@ -329,14 +330,13 @@ function BrotherhoodChat() {
         </AnimatePresence>
         <div ref={endRef} />
       </div>
-      <div className="flex gap-2 border-t border-border p-3">
+      <form onSubmit={send} className="flex gap-2 border-t border-border p-3">
         <Input value={text} onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder={t("send_message")} className="h-11 rounded-xl" />
-        <Button onClick={send} className="h-11 rounded-xl px-4">
+          disabled={sending} placeholder="Mesaj yaz..." className="h-11 rounded-xl" />
+        <Button type="submit" disabled={sending || !text.trim()} className="h-11 rounded-xl px-4">
           <Send className="h-4 w-4" />
         </Button>
-      </div>
+      </form>
     </aside>
   );
 }

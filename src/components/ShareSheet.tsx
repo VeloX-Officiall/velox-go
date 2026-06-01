@@ -91,7 +91,8 @@ export function ShareSheet({ open, onOpenChange }: { open: boolean; onOpenChange
                 <MediaUpload
                   kind={kind}
                   value={kind === "image" ? imageUrl : videoUrl}
-                  onChange={(url) => (kind === "image" ? setImageUrl(url) : setVideoUrl(url))}
+                  onUploaded={(url) => (kind === "image" ? setImageUrl(url) : setVideoUrl(url))}
+                  onClear={() => (kind === "image" ? setImageUrl("") : setVideoUrl(""))}
                 />
                 <Input placeholder="Məhsul Adı" value={title} onChange={(e) => setTitle(e.target.value)} className="h-11 rounded-xl" />
                 <Input placeholder="Qiymət (AZN)" type="number" min="0" step="0.01" value={price}

@@ -124,6 +124,7 @@ export type Database = {
           pickup_label: string | null
           pickup_lat: number | null
           pickup_lng: number | null
+          post_id: string | null
           ready_at: string | null
           status: string
           store_id: string | null
@@ -142,6 +143,7 @@ export type Database = {
           pickup_label?: string | null
           pickup_lat?: number | null
           pickup_lng?: number | null
+          post_id?: string | null
           ready_at?: string | null
           status?: string
           store_id?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           pickup_label?: string | null
           pickup_lat?: number | null
           pickup_lng?: number | null
+          post_id?: string | null
           ready_at?: string | null
           status?: string
           store_id?: string | null
@@ -236,6 +239,7 @@ export type Database = {
           id: string
           image_url: string | null
           location: string | null
+          price_azn: number | null
           tags: string[] | null
           title: string
           video_url: string | null
@@ -248,6 +252,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          price_azn?: number | null
           tags?: string[] | null
           title: string
           video_url?: string | null
@@ -260,6 +265,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           location?: string | null
+          price_azn?: number | null
           tags?: string[] | null
           title?: string
           video_url?: string | null

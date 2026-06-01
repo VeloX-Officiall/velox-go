@@ -13,6 +13,7 @@ import { Route as StoreRouteImport } from './routes/store'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as FeedRouteImport } from './routes/feed'
+import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as CustomerRouteImport } from './routes/customer'
 import { Route as CourierRouteImport } from './routes/courier'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -37,6 +38,11 @@ const MessagesRoute = MessagesRouteImport.update({
 const FeedRoute = FeedRouteImport.update({
   id: '/feed',
   path: '/feed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomerRoute = CustomerRouteImport.update({
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
+  '/discover': typeof DiscoverRoute
   '/feed': typeof FeedRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
+  '/discover': typeof DiscoverRoute
   '/feed': typeof FeedRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/courier': typeof CourierRoute
   '/customer': typeof CustomerRoute
+  '/discover': typeof DiscoverRoute
   '/feed': typeof FeedRoute
   '/messages': typeof MessagesRoute
   '/profile': typeof ProfileRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/courier'
     | '/customer'
+    | '/discover'
     | '/feed'
     | '/messages'
     | '/profile'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/courier'
     | '/customer'
+    | '/discover'
     | '/feed'
     | '/messages'
     | '/profile'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/courier'
     | '/customer'
+    | '/discover'
     | '/feed'
     | '/messages'
     | '/profile'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   CourierRoute: typeof CourierRoute
   CustomerRoute: typeof CustomerRoute
+  DiscoverRoute: typeof DiscoverRoute
   FeedRoute: typeof FeedRoute
   MessagesRoute: typeof MessagesRoute
   ProfileRoute: typeof ProfileRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/feed'
       fullPath: '/feed'
       preLoaderRoute: typeof FeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/customer': {
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   CourierRoute: CourierRoute,
   CustomerRoute: CustomerRoute,
+  DiscoverRoute: DiscoverRoute,
   FeedRoute: FeedRoute,
   MessagesRoute: MessagesRoute,
   ProfileRoute: ProfileRoute,

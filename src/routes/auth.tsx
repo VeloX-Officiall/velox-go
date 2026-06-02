@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Bike, Store, User as UserIcon, Mail, Lock, Loader2, AtSign, IdCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthSession } from "@/lib/auth";
 import { lovable } from "@/integrations/lovable";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
@@ -230,19 +231,11 @@ function AuthPage() {
 }
 
 function KycHelper() {
-  const { user } = (require("@/lib/auth") as typeof import("@/lib/auth")).useAuthSession ? { user: null } : { user: null };
-  // Render helper that defers actual upload until after the user has an id.
-  // We re-fetch via session post-signup; until then show a hint.
-  const session = useAuthSessionLocal();
-  if (!session?.user) {
+  const { user } = useAuthSession();
+  if (!user) {
     return <p className="text-[11px] text-muted-foreground">Qeydiyyatdan sonra burada ID şəklini yükləyə biləcəksiniz.</p>;
   }
-  return <IdUpload userId={session.user.id} />;
+  return <IdUpload userId={user.id} />;
 }
 
-function useAuthSessionLocal() {
-  // tiny re-export to avoid circular import naming
-  const { useAuthSession } = require("@/lib/auth") as typeof import("@/lib/auth");
-  return useAuthSession();
-}
 

@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { MapPin, MessageCircle, ChevronDown, Truck } from "lucide-react";
 import { useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+
 
 const ADDRESS_KEY = "velox.address";
 
@@ -79,8 +81,8 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
           )}
         </div>
 
-        {/* CENTER segmented */}
-        {user && (
+        {/* CENTER segmented — only on home/feed */}
+        {user && onFeed && (
           <div className="flex rounded-full bg-accent p-0.5 text-xs font-bold">
             <button onClick={() => navigate({ to: "/feed" })}
               className={`rounded-full px-3 py-1.5 transition ${onFeed ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}>
@@ -95,17 +97,18 @@ export function AppHeader({ subtitle }: { subtitle?: string }) {
 
         {/* RIGHT */}
         <div className="flex flex-1 items-center justify-end gap-2">
-          {user ? (
+          <LanguageSwitcher />
+          {user && onFeed ? (
             <Link to="/messages" title="Mesajlar"
               className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border hover:bg-accent">
               <MessageCircle className="h-4 w-4" />
             </Link>
-          ) : (
+          ) : !user ? (
             <Link to="/auth" search={{ role: "customer" } as never}
               className="rounded-xl bg-gradient-hero px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-glow">
               Daxil ol
             </Link>
-          )}
+          ) : null}
         </div>
       </div>
       {subtitle && (

@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      community_chat: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -53,6 +74,30 @@ export type Database = {
           created_at?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      courier_locations: {
+        Row: {
+          courier_id: string
+          id: string
+          lat: number
+          lng: number
+          recorded_at: string
+        }
+        Insert: {
+          courier_id: string
+          id?: string
+          lat: number
+          lng: number
+          recorded_at?: string
+        }
+        Update: {
+          courier_id?: string
+          id?: string
+          lat?: number
+          lng?: number
+          recorded_at?: string
         }
         Relationships: []
       }
@@ -277,14 +322,18 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          day_pass_until: string | null
           fin_code: string | null
           full_name: string | null
           id: string
+          id_document_url: string | null
+          id_status: string
           ig_url: string | null
           is_online: boolean
           last_seen_at: string | null
           phone: string | null
           social_url: string | null
+          status: string
           tt_url: string | null
           username: string | null
           verified: boolean
@@ -294,14 +343,18 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          day_pass_until?: string | null
           fin_code?: string | null
           full_name?: string | null
           id: string
+          id_document_url?: string | null
+          id_status?: string
           ig_url?: string | null
           is_online?: boolean
           last_seen_at?: string | null
           phone?: string | null
           social_url?: string | null
+          status?: string
           tt_url?: string | null
           username?: string | null
           verified?: boolean
@@ -311,14 +364,18 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          day_pass_until?: string | null
           fin_code?: string | null
           full_name?: string | null
           id?: string
+          id_document_url?: string | null
+          id_status?: string
           ig_url?: string | null
           is_online?: boolean
           last_seen_at?: string | null
           phone?: string | null
           social_url?: string | null
+          status?: string
           tt_url?: string | null
           username?: string | null
           verified?: boolean
@@ -387,6 +444,7 @@ export type Database = {
         Returns: boolean
       }
       refresh_store_verified: { Args: { _store: string }; Returns: undefined }
+      start_courier_day: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "courier" | "store" | "customer"

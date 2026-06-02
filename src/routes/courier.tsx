@@ -2,9 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Wallet, Plus, MapPin, Lock, Send, Users, Clock, Package } from "lucide-react";
+import { Play, Wallet, Plus, MapPin, Lock, Send, Users, Clock, Package, Radio } from "lucide-react";
 import "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
+import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
@@ -12,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CardCheckout } from "@/components/CardCheckout";
 import { usePresenceHeartbeat, useOnlineCount } from "@/lib/usePresence";
+import { useCourierTracking } from "@/lib/useCourierTracking";
 
 export const Route = createFileRoute("/courier")({
   head: () => ({ meta: [{ title: "Courier · VeloX" }] }),
@@ -37,6 +39,9 @@ function CourierDashboard() {
   const [topUpAmount, setTopUpAmount] = useState("5");
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
+  // Live GPS streaming while day is active
+  useCourierTracking(dayActive);
+
   const loadWallet = useCallback(async () => {
     if (!user) return;
     let { data } = await supabase.from("courier_wallet").select("*").eq("user_id", user.id).maybeSingle();
@@ -47,8 +52,13 @@ function CourierDashboard() {
     setBalance(Number(data.balance_azn) || 0);
     if (data.day_pass_until) {
       const ts = new Date(data.day_pass_until).getTime();
-      if (ts > Date.now()) { setDayActive(true); setEndsAt(ts); } else { setDayActive(false); setEndsAt(null); }
-    }
+      if (ts > Date.now()) { setDayActive(true); setEndsAt(ts); }
+      else {
+        setDayActive(false); setEndsAt(null);
+        // auto-reset profile status when 24h elapsed
+        await supabase.from("profiles").update({ status: "offline", is_online: false } as never).eq("id", user.id);
+      }
+    } else { setDayActive(false); setEndsAt(null); }
   }, [user?.id]);
 
   const loadOrders = useCallback(async () => {
@@ -72,14 +82,25 @@ function CourierDashboard() {
     return () => { supabase.removeChannel(ch); };
   }, [loadOrders]);
 
+  // Auto re-evaluate day expiry every minute
+  useEffect(() => {
+    if (!dayActive || !endsAt) return;
+    if (Date.now() >= endsAt) { loadWallet(); }
+  }, [now, dayActive, endsAt, loadWallet]);
+
   const startDay = async () => {
-    if (!user || balance < 1) { toast.error(t("err_balance_low")); return; }
-    const until = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
-    const newBal = +(balance - 1).toFixed(2);
-    const { error } = await supabase.from("courier_wallet")
-      .update({ balance_azn: newBal, day_pass_until: until }).eq("user_id", user.id);
-    if (error) { toast.error(error.message); return; }
-    setBalance(newBal); setDayActive(true); setEndsAt(Date.now() + 24 * 3600 * 1000);
+    if (!user) return;
+    if (balance < 1) { toast.error(t("err_balance_low")); return; }
+    const { data, error } = await supabase.rpc("start_courier_day" as never);
+    if (error) {
+      const msg = (error.message || "").includes("insufficient_balance")
+        ? t("err_balance_low") : error.message;
+      toast.error(msg); return;
+    }
+    const expires = (data as { expires_at?: string })?.expires_at;
+    if (expires) setEndsAt(new Date(expires).getTime());
+    setDayActive(true);
+    setBalance((b) => +(b - 1).toFixed(2));
     toast.success(t("ok_started_day"));
   };
 
@@ -119,7 +140,7 @@ function CourierDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader subtitle={t("courier_dash")} />
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 lg:grid-cols-3">
+      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-8 pb-24 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
@@ -131,6 +152,11 @@ function CourierDashboard() {
                   <div className="mt-1 text-2xl font-bold">
                     {dayActive ? `${t("day_active")} · ${hoursLeft}h ${t("hours_left")}` : t("daily_pass_desc")}
                   </div>
+                  {dayActive && (
+                    <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-bold backdrop-blur">
+                      <Radio className="h-3 w-3 animate-pulse" /> GPS yayım aktiv
+                    </div>
+                  )}
                 </div>
                 {dayActive ? (
                   <div className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur">
@@ -140,7 +166,7 @@ function CourierDashboard() {
                   <Button onClick={startDay} disabled={balance < 1}
                     className="h-12 gap-2 rounded-xl bg-white px-6 text-base font-bold text-primary hover:bg-white/90">
                     <Play className="h-5 w-5 fill-current" />
-                    {t("start_day")}
+                    {t("start_day")} (1 AZN)
                   </Button>
                 )}
               </div>
@@ -211,6 +237,7 @@ function CourierDashboard() {
 
         <BrotherhoodChat />
       </main>
+      <BottomNav />
 
       {/* Top up amount picker */}
       {topUpOpen && (
@@ -246,7 +273,7 @@ type ChatMsg = { id: string; user_id: string; body: string; created_at: string }
 function BrotherhoodChat() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
-  const onlineCount = useOnlineCount("courier");
+  const onlineCount = useOnlineCount();
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
   const [text, setText] = useState("");
@@ -272,13 +299,13 @@ function BrotherhoodChat() {
     let cancelled = false;
     (async () => {
       const { data } = await supabase
-        .from("courier_chat").select("*").order("created_at", { ascending: true }).limit(100);
+        .from("community_chat" as never).select("*").order("created_at", { ascending: true }).limit(100);
       if (cancelled || !data) return;
       setMessages(data as ChatMsg[]);
       resolveNames(Array.from(new Set((data as ChatMsg[]).map((m) => m.user_id))));
     })();
-    const ch = supabase.channel("courier-chat")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "courier_chat" }, (payload) => {
+    const ch = supabase.channel("community-chat")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "community_chat" }, (payload) => {
         const m = payload.new as ChatMsg;
         setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
         resolveNames([m.user_id]);
@@ -294,8 +321,8 @@ function BrotherhoodChat() {
     const body = text.trim();
     if (!body || !user || sending) return;
     setSending(true);
-    setText(""); // clear input immediately (optimistic)
-    const { error } = await supabase.from("courier_chat").insert({ user_id: user.id, body });
+    setText("");
+    const { error } = await supabase.from("community_chat" as never).insert({ user_id: user.id, body } as never);
     setSending(false);
     if (error) { toast.error(error.message); setText(body); }
   };
@@ -305,11 +332,11 @@ function BrotherhoodChat() {
       <div className="flex items-center justify-between border-b border-border p-5">
         <div>
           <h2 className="flex items-center gap-2 font-bold">
-            <Users className="h-5 w-5 text-success" /> Qardaşlıq Çatı
+            <Users className="h-5 w-5 text-success" /> {t("brotherhood")}
           </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
             <span className={`mr-1.5 inline-block h-2 w-2 rounded-full ${onlineCount > 0 ? "bg-success animate-pulse" : "bg-muted-foreground/40"}`} />
-            {onlineCount} onlayn kuryer
+            {onlineCount} {t("online_now")}
           </p>
         </div>
       </div>
@@ -332,7 +359,7 @@ function BrotherhoodChat() {
       </div>
       <form onSubmit={send} className="flex gap-2 border-t border-border p-3">
         <Input value={text} onChange={(e) => setText(e.target.value)}
-          disabled={sending} placeholder="Mesaj yaz..." className="h-11 rounded-xl" />
+          disabled={sending} placeholder={t("send_message")} className="h-11 rounded-xl" />
         <Button type="submit" disabled={sending || !text.trim()} className="h-11 rounded-xl px-4">
           <Send className="h-4 w-4" />
         </Button>

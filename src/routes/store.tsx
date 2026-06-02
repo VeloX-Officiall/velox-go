@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { PresenceSwitch } from "@/components/PresenceSwitch";
-import { BottomNav } from "@/components/BottomNav";
+
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/store")({
@@ -146,7 +146,7 @@ function StoreDashboard() {
           </aside>
         </div>
       </main>
-      <BottomNav />
+      
     </div>
   );
 }

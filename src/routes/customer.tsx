@@ -12,7 +12,7 @@ import { calcDeliveryFee, formatAzn, haversineKm } from "@/lib/pricing";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPicker, type LatLng } from "@/components/MapPicker";
-import { BottomNav } from "@/components/BottomNav";
+
 import { useAppPresence } from "@/lib/useAppPresence";
 import { toast } from "sonner";
 
@@ -277,7 +277,7 @@ function CustomerDashboard() {
           </motion.div>
         )}
       </main>
-      <BottomNav />
+      
     </div>
   );
 }

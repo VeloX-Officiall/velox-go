@@ -237,7 +237,7 @@ function CourierDashboard() {
 
         <BrotherhoodChat />
       </main>
-      <BottomNav />
+      
 
       {/* Top up amount picker */}
       {topUpOpen && (

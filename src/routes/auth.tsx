@@ -194,6 +194,19 @@ function AuthPage() {
             </Button>
           </form>
 
+          {mode === "signup" && (selectedRole === "courier" || selectedRole === "store") && (
+            <div className="mt-4 space-y-2 rounded-xl border border-border bg-accent/20 p-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-primary">
+                Şəxsiyyət vəsiqəsi (KYC)
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {selectedRole === "courier" ? "Kuryer" : "Mağaza"} qeydiyyatı üçün ID şəkli tələb olunur.
+                Qeydiyyatdan sonra profilinizdə də yükləyə bilərsiniz.
+              </p>
+              <KycHelper />
+            </div>
+          )}
+
           {!isCourier && (
             <>
               <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">

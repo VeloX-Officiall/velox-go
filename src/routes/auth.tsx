@@ -228,3 +228,21 @@ function AuthPage() {
     </div>
   );
 }
+
+function KycHelper() {
+  const { user } = (require("@/lib/auth") as typeof import("@/lib/auth")).useAuthSession ? { user: null } : { user: null };
+  // Render helper that defers actual upload until after the user has an id.
+  // We re-fetch via session post-signup; until then show a hint.
+  const session = useAuthSessionLocal();
+  if (!session?.user) {
+    return <p className="text-[11px] text-muted-foreground">Qeydiyyatdan sonra burada ID şəklini yükləyə biləcəksiniz.</p>;
+  }
+  return <IdUpload userId={session.user.id} />;
+}
+
+function useAuthSessionLocal() {
+  // tiny re-export to avoid circular import naming
+  const { useAuthSession } = require("@/lib/auth") as typeof import("@/lib/auth");
+  return useAuthSession();
+}
+

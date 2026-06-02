@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Play, Wallet, Plus, MapPin, Lock, Send, Users, Clock, Package, Radio } from "lucide-react";
 import "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
+import { BottomNav } from "@/components/BottomNav";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

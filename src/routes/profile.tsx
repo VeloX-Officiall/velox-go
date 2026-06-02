@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppHeader } from "@/components/AppHeader";
-
+import { BottomNav } from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -218,7 +218,7 @@ function ProfilePage() {
           </div>
         )}
       </main>
-      
+      <BottomNav />
     </div>
   );
 }

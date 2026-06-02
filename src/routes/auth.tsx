@@ -8,6 +8,7 @@ import { lovable } from "@/integrations/lovable";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { IdUpload } from "@/components/IdUpload";
 import { toast } from "sonner";
 
 type Role = "courier" | "store" | "customer";

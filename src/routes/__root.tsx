@@ -10,7 +10,6 @@ import {
 
 import appCss from "../styles.css?url";
 import { SupportBot } from "@/components/SupportBot";
-import { BottomNav } from "@/components/BottomNav";
 import { Toaster } from "sonner";
 
 function NotFoundComponent() {
@@ -124,7 +123,6 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      <BottomNav />
       <SupportBot />
       <Toaster richColors position="top-center" />
     </QueryClientProvider>

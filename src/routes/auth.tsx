@@ -4,10 +4,12 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Bike, Store, User as UserIcon, Mail, Lock, Loader2, AtSign, IdCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuthSession } from "@/lib/auth";
 import { lovable } from "@/integrations/lovable";
 import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { IdUpload } from "@/components/IdUpload";
 import { toast } from "sonner";
 
 type Role = "courier" | "store" | "customer";
@@ -193,6 +195,19 @@ function AuthPage() {
             </Button>
           </form>
 
+          {mode === "signup" && (selectedRole === "courier" || selectedRole === "store") && (
+            <div className="mt-4 space-y-2 rounded-xl border border-border bg-accent/20 p-3">
+              <div className="text-xs font-bold uppercase tracking-wider text-primary">
+                Şəxsiyyət vəsiqəsi (KYC)
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {selectedRole === "courier" ? "Kuryer" : "Mağaza"} qeydiyyatı üçün ID şəkli tələb olunur.
+                Qeydiyyatdan sonra profilinizdə də yükləyə bilərsiniz.
+              </p>
+              <KycHelper />
+            </div>
+          )}
+
           {!isCourier && (
             <>
               <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
@@ -214,3 +229,13 @@ function AuthPage() {
     </div>
   );
 }
+
+function KycHelper() {
+  const { user } = useAuthSession();
+  if (!user) {
+    return <p className="text-[11px] text-muted-foreground">Qeydiyyatdan sonra burada ID şəklini yükləyə biləcəksiniz.</p>;
+  }
+  return <IdUpload userId={user.id} />;
+}
+
+

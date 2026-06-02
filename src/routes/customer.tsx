@@ -12,6 +12,8 @@ import { calcDeliveryFee, formatAzn, haversineKm } from "@/lib/pricing";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { MapPicker, type LatLng } from "@/components/MapPicker";
+import { BottomNav } from "@/components/BottomNav";
+import { useAppPresence } from "@/lib/useAppPresence";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/customer")({
@@ -39,6 +41,7 @@ type FeedFilter = "store" | "customer" | "courier";
 function CustomerDashboard() {
   const { t } = useTranslation();
   const { user } = useAuthSession();
+  useAppPresence(true);
   const [tab, setTab] = useState<"explore" | "anything">("explore");
   const [feedFilter, setFeedFilter] = useState<FeedFilter>("store");
   const [posts, setPosts] = useState<Post[]>([]);
@@ -274,6 +277,7 @@ function CustomerDashboard() {
           </motion.div>
         )}
       </main>
+      <BottomNav />
     </div>
   );
 }

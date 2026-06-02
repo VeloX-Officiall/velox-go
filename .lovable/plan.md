@@ -1,88 +1,85 @@
-## VeloX Super App — Tam Yenidən Qurma Planı
+# VeloX Production-Ready Transition Plan
 
-Bu plan kritik bug-fix-ləri və tam yeni naviqasiya/ekran strukturunu Azərbaycan dilində hardcode olunmuş şəkildə tətbiq edir.
+Bu, 7 əsas bloku əhatə edən geniş bir yenilənmədir. Hər biri ardıcıl olaraq tətbiq olunacaq.
 
----
+## 1. Presence Engine (Rol əsaslı status)
 
-### 1. Kritik Bug-fix-lər
+**DB dəyişiklikləri** (migration):
+- `profiles.status` text ('online' | 'offline'), default 'offline'
+- `profiles.day_pass_started_at` timestamptz (kuryer üçün)
+- `profiles.id_document_url`, `profiles.id_status` ('none'|'pending_verification'|'verified')
+- `courier_locations` cədvəli: id, courier_id, lat, lng, recorded_at; RLS: kuryer öz qeydlərini yazır, müştərilər yalnız onlara təyin olunmuş kuryerin son koordinatını oxuya bilər
+- `start_courier_day()` RPC: cüzdandan 1 AZN tutur, `day_pass_until = now()+24h`, status='online'
+- Müştəri: app açıq → online, bağlananda → offline (visibility + beforeunload)
+- Mağaza: Switch toggle dashboard header-ində
+- Kuryer: dashboardda "Günü Başlat (1 AZN)" düyməsi; balans yoxlanışı; saat bitəndə avtomatik offline
 
-**A. Auth axını (`src/routes/auth.tsx`)**
-- Profil insert-i `handle_new_user` trigger-i tərəfindən idarə olunur — amma trigger `username` və `fin_code` yazmır. Düzəliş: trigger-i yeniləyəcəyik ki, `raw_user_meta_data`-dan `username` və `fin_code` götürsün. Bu, RLS/timing race-lərini aradan qaldırır.
-- Client-də: signup zamanı bütün məlumatları `options.data`-ya ötürmək; sonradan `update` etməmək (race-condition yox).
-- Username unikallığını qeydiyyatdan əvvəl yoxla, error mesajını AZ-də göstər.
+## 2. i18n Engine (AZ/EN/RU)
 
-**B. Qardaşlıq Çat (`src/routes/courier.tsx`)**
-- Form submit handler-də `setBody("")` send-dən ƏVVƏL state-i təmizləmir → optimistik UI yox. Düzəliş: `await supabase.insert` uğurlu olduqdan sonra `setBody("")` çağır, error olarsa toast göstər.
-- Realtime subscription-da event listener `INSERT` filtrini düzgün qur, dublikatları `id` ilə dedupe et.
-- Input-da `disabled={sending}` flag-i əlavə et.
+- `src/lib/i18n.ts` üzərindən tam dictionary (mövcud quruluş) genişləndiriləcək — bütün hardcoded AZ stringlərı `t()` ilə əvəz olunacaq
+- Welcome/Login/Signup üst sağda dil seçici (artıq mövcud `LanguageSwitcher`) — pre-auth aktiv
+- AppHeader, BottomNav, ShareSheet, feed, discover, activity, profile, courier, store, customer — hamısı translation map istifadə edəcək
+- localStorage ilə dil yadda saxlanır
 
-**C. Tam AZ Lokalizasiya**
-- `src/lib/i18n.ts`-i UI üçün istifadə etməyi DAYANDIR. Bütün route/komponent string-ləri birbaşa AZ-də hardcode et.
-- LanguageSwitcher-i header-dən sil (yalnız AI bot üçün dil seçimi qalsın, daxili setting).
+## 3. KYC ID Upload
 
----
+- `identity_docs` private bucket (storage_create_bucket)
+- RLS: yalnız user özü `auth.uid()/...` path-inə yaza/oxuya bilər
+- Signup-da rol Courier/Seller seçilərsə → `IdUpload` komponenti ID şəkli (jpg/png) qəbul edir, yükləyir, `profiles.id_document_url` + `id_status='pending_verification'` yazır
 
-### 2. Üst Header (Dinamik) — yeni `AppHeader` komponenti
+## 4. Live GPS
 
-```
-┌─────────────────────────────────────────────────────────┐
-│ [📍 Bakı, Nizami küç.]   [Axın | Mağazalar]   [💬 3]   │
-└─────────────────────────────────────────────────────────┘
-```
+- `useCourierTracking` hook: status=online və rol=courier olduqda hər 10 saniyədə `navigator.geolocation.getCurrentPosition` → `courier_locations` insert
+- Activity səhifəsində müştəri öz aktiv sifarişinin kuryerini real-vaxtlı izləyir (Supabase Realtime + Leaflet artıq mövcud `MapPicker`-də)
 
-- **Sol**: Müştəri üçün ünvan seçici (modal açılır + MapPicker); Kuryer üçün `Onlayn/Oflayn` toggle (profiles.is_online yazır).
-- **Orta**: Segmented control `Axın | Mağazalar` — route dəyişdirir `/feed` ↔ `/stores` (və ya tab state).
-- **Sağ**: Chat icon + unread badge → `/messages` route-una.
+## 5. Realtime Chat
 
----
+- Artıq `courier_chat` var. "Qardaşlıq Çat"ı bütün rollar üçün açırıq: yeni `community_chat` cədvəli, RLS: hər authenticated user oxuya/yaza bilər
+- Realtime subscription, send → optimistic input reset
 
-### 3. Alt Naviqasiya — yeni `BottomNav` komponenti (5 tab)
+## 6. Axın Video Feed
 
-| Tab | Route | Məzmun |
-|-----|-------|--------|
-| 🏠 Axın | `/feed` | Vertikal video swipe feed, sağda Like/Comment/Share/Sifariş et düymələri |
-| 🔍 Kəşfet | `/discover` | Axtarış + 4 kateqoriya grid (Restoranlar, Marketlər, Geyim, Şirniyyat) |
-| ➕ Paylaş | modal | Bottom-sheet: "Video Paylaş" / "Şəkil Paylaş" + Məhsul Adı/Qiymət/Təsvir |
-| 🛍️ Aktivlik | `/activity` | Rol-əsaslı: müştəri → sifariş tracker; kuryer → iş paneli |
-| 👤 Profil | `/profile` | İstifadəçi + VeloX Cüzdan (Balans artır/Nağdlaşdır) |
+- `product_videos` public bucket
+- ShareSheet üçün ayrıca "🎥 Video Paylaş" sekansı: title, price_azn, category, fayl yüklənir → posts cədvəlinə (`video_url`, `price_azn`, `title`, `tags=[category]`)
+- Feed səhifəsində `<video autoplay loop muted playsInline>` + IntersectionObserver
+- "Sifariş et" → orders insert (post_id, store_id=author_id) + Activity-ə redirect
 
----
+## 7. Profile Two-State
 
-### 4. Database dəyişiklikləri
+- `/profile`-ı iki rejimə bölmək: State A (oxu) və State B (redaktə)
+- "Profili redaktə et" / "Ləğv et" düymələri
+- "Yadda saxla" → update + toast + State A-ya qayıt
+- AppHeader-dən segment tabs və chat icon-u yalnız `/feed` (home) olduqda göstər; digər routelarda sadə back+title
 
-- `handle_new_user` trigger-ini yeniləmək: `username`, `fin_code` metadata-dan oxusun.
-- `posts` cədvəlinə `price_azn` numeric NULL əlavə et (məhsul qiyməti üçün).
-- `orders` cədvəlinə `post_id` uuid NULL əlavə et (feed-dən sifariş üçün).
+## Texniki Qeydlər
 
----
+- Bütün migrationlar GRANT + RLS ilə düzgün quruluşda
+- Heç bir mövcud server fn auth axını sındırılmır
+- Bucket yaratmaq üçün `supabase--storage_create_bucket` tool
+- 24h sıfırlama: client tərəfdə `day_pass_until <= now()` yoxlanışı + serverdə insert/online qoruyucu (RPC)
+- Mövcud `i18n.ts` strukturuna sadiq qalırıq, dictionary genişləndirilir
 
-### 5. Yeni/Dəyişəcək fayllar
+## Fayl Dəyişiklikləri
 
 **Yeni:**
-- `src/components/AppHeader.tsx` (yenidən yazılır — dinamik)
-- `src/components/BottomNav.tsx`
-- `src/components/ShareSheet.tsx` (paylaş modal)
-- `src/components/AddressSelector.tsx`
-- `src/routes/feed.tsx`
-- `src/routes/discover.tsx`
-- `src/routes/activity.tsx`
+- `src/components/IdUpload.tsx`
+- `src/components/PresenceSwitch.tsx` (Mağaza üçün)
+- `src/components/StartDayButton.tsx` (Kuryer üçün)
+- `src/components/CourierTracker.tsx` (xəritədə kuryer izi)
+- `src/lib/useAppPresence.ts` (müştəri lifecycle)
+- `src/lib/useCourierTracking.ts`
+- `supabase/migrations/...` (status, day_pass, courier_locations, community_chat, RPC)
 
-**Dəyişəcək:**
-- `src/routes/__root.tsx` — BottomNav-ı bütün auth-lı route-lara əlavə
-- `src/routes/auth.tsx` — signup race-condition fix
-- `src/routes/courier.tsx` — chat send/clear fix
-- `src/routes/profile.tsx` — VeloX Cüzdan bölməsi + Balans artır/Nağdlaşdır
-- `src/routes/customer.tsx` & `store.tsx` — yeni route-lara redirect (legacy)
-- `supabase/migrations/*` — trigger + sütun əlavələri
+**Redaktə:**
+- `src/lib/i18n.ts` (tam dictionary)
+- `src/routes/auth.tsx` (KYC inteqrasiyası)
+- `src/routes/courier.tsx` (StartDay, GPS, chat → community_chat)
+- `src/routes/store.tsx` (PresenceSwitch)
+- `src/routes/customer.tsx` (useAppPresence)
+- `src/routes/profile.tsx` (iki state)
+- `src/routes/feed.tsx` (Sifariş et işə salınması)
+- `src/routes/activity.tsx` (CourierTracker)
+- `src/components/AppHeader.tsx` (segments yalnız home-da)
+- `src/components/ShareSheet.tsx` (video upload pipeline)
 
----
-
-### 6. Texniki qeydlər
-
-- Bütün UI-string-lər AZ-də hardcode (i18n.ts yalnız AI bot üçün).
-- `framer-motion` artıq dependency-dədir, bottom-sheet üçün istifadə.
-- Video feed üçün native `<video>` + `IntersectionObserver` (yeni dependency yox).
-- VeloX Cüzdan "Balans artır" mövcud `CardCheckout` komponentini istifadə edəcək; "Nağdlaşdır" sadəcə transactions cədvəlinə `withdraw` kind ilə insert edəcək (simulyasiya).
-- "Sifariş et" düyməsi feed-də post-dan order yaradır (post_id ilə bağlı).
-
-Plan təsdiqlənsə, hər şeyi tək axında qururam: əvvəl migration, sonra komponentlər və route-lar, sonunda chat/auth düzəlişləri.
+Təsdiq edirsiniz? Təsdiqdən sonra dəyişiklikləri ardıcıl tətbiq edirəm — əvvəlcə DB migration + bucket-lər, sonra hooks, sonra UI.

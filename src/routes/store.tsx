@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { PresenceSwitch } from "@/components/PresenceSwitch";
+import { BottomNav } from "@/components/BottomNav";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/store")({
@@ -67,7 +69,11 @@ function StoreDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <AppHeader subtitle={t("store_dash")} />
-      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-8 pb-24">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Mağaza statusu</div>
+          <PresenceSwitch />
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard label="Aktiv elanlar" value={posts.length.toString()} tone="primary" />
           <div className={`rounded-2xl p-5 shadow-card ${verified ? "bg-gradient-success text-success-foreground" : "bg-card border border-border"}`}>
@@ -140,6 +146,7 @@ function StoreDashboard() {
           </aside>
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 }

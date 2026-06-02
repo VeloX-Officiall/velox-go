@@ -218,7 +218,7 @@ function ProfilePage() {
           </div>
         )}
       </main>
-      <BottomNav />
+      
     </div>
   );
 }

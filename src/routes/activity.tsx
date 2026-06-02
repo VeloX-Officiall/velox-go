@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { MapPin, Clock, CheckCircle2, Package, Bike, Loader2 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
+import { CourierTracker } from "@/components/CourierTracker";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -108,10 +109,13 @@ function CustomerActivity() {
                 );
               })}
             </div>
-            {/* Live map placeholder */}
-            {(o.status === "accepted" || o.status === "ready") && (
-              <div className="mt-4 flex h-32 items-center justify-center rounded-xl border border-dashed border-border bg-accent/20 text-xs text-muted-foreground">
-                <Bike className="mr-2 h-4 w-4 text-primary" /> Kuryer yoldadır...
+            {/* Live courier tracking map */}
+            {(o.status === "accepted" || o.status === "ready") && o.courier_id && (
+              <div className="mt-4">
+                <div className="mb-1.5 flex items-center gap-1.5 text-xs font-bold text-primary">
+                  <Bike className="h-3.5 w-3.5" /> Kuryer canlı izlənir
+                </div>
+                <CourierTracker courierId={o.courier_id} />
               </div>
             )}
           </div>

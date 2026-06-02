@@ -277,7 +277,7 @@ function CustomerDashboard() {
           </motion.div>
         )}
       </main>
-      
+      <BottomNav />
     </div>
   );
 }

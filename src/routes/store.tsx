@@ -146,6 +146,7 @@ function StoreDashboard() {
           </aside>
         </div>
       </main>
+      <BottomNav />
     </div>
   );
 }

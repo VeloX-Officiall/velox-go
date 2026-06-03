@@ -6,25 +6,27 @@ import { useAuthSession } from "@/lib/auth";
  * Marks the current user as online via a heartbeat that updates profiles.is_online + last_seen_at.
  * Marks offline on unmount and on `beforeunload`.
  */
+let hbUserId: string | null = null;
+let hbStarted = false;
+async function setOnlineOnce(userId: string, online: boolean) {
+  await supabase.from("profiles")
+    .update({ is_online: online, last_seen_at: new Date().toISOString() } as never)
+    .eq("id", userId);
+}
 export function usePresenceHeartbeat() {
   const { user } = useAuthSession();
   useEffect(() => {
     if (!user) return;
-    let cancelled = false;
-    const setOnline = async (online: boolean) => {
-      await supabase.from("profiles")
-        .update({ is_online: online, last_seen_at: new Date().toISOString() } as never)
-        .eq("id", user.id);
-    };
-    setOnline(true);
-    const interval = setInterval(() => { if (!cancelled) setOnline(true); }, 60_000);
-    const onLeave = () => { setOnline(false); };
+    if (hbStarted && hbUserId === user.id) return;
+    hbStarted = true; hbUserId = user.id;
+    setOnlineOnce(user.id, true);
+    const interval = setInterval(() => { if (hbUserId) setOnlineOnce(hbUserId, true); }, 60_000);
+    const onLeave = () => { if (hbUserId) setOnlineOnce(hbUserId, false); };
     window.addEventListener("beforeunload", onLeave);
     return () => {
-      cancelled = true;
       clearInterval(interval);
       window.removeEventListener("beforeunload", onLeave);
-      setOnline(false);
+      hbStarted = false;
     };
   }, [user?.id]);
 }

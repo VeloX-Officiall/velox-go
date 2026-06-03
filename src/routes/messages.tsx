@@ -45,7 +45,7 @@ function MessagesPage() {
       }
       setConvs(list);
     })();
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!active) return;

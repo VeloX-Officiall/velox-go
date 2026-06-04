@@ -278,7 +278,7 @@ function BrotherhoodChat() {
   const { user } = useAuthSession();
   const onlineCount = useOnlineCount();
   const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [names, setNames] = useState<Record<string, string>>({});
+  const [names, setNames] = useState<Record<string, { label: string; username: string | null; avatar: string | null }>>({});
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
@@ -286,12 +286,12 @@ function BrotherhoodChat() {
   const resolveNames = useCallback(async (ids: string[]) => {
     const missing = ids.filter((id) => id && !(id in names));
     if (missing.length === 0) return;
-    const { data } = await supabase.from("profiles").select("id, full_name, username").in("id", missing);
+    const { data } = await supabase.from("profiles").select("id, full_name, username, avatar_url").in("id", missing);
     if (data) {
       setNames((prev) => {
         const next = { ...prev };
-        for (const p of data as { id: string; full_name: string | null; username: string | null }[]) {
-          next[p.id] = p.full_name || p.username || "—";
+        for (const p of data as { id: string; full_name: string | null; username: string | null; avatar_url: string | null }[]) {
+          next[p.id] = { label: p.full_name || p.username || "—", username: p.username, avatar: p.avatar_url };
         }
         return next;
       });

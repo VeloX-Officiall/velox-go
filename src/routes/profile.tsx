@@ -78,6 +78,15 @@ function ProfilePage() {
     const payload: Record<string, unknown> = {
       full_name: form.full_name, phone: form.phone, avatar_url: form.avatar_url,
     };
+    const handle = form.username.trim().replace(/^@/, "").toLowerCase();
+    if (handle && handle !== (username || "").toLowerCase()) {
+      if (!/^[a-z0-9_]{3,24}$/.test(handle)) {
+        setBusy(false);
+        toast.error("Username 3-24 simvol, yalnız a-z, 0-9, _");
+        return;
+      }
+      payload.username = handle;
+    }
     if (isCourier) {
       payload.yt_url = form.yt_url || null;
       payload.tt_url = form.tt_url || null;
@@ -87,8 +96,16 @@ function ProfilePage() {
       payload.social_url = form.social_url || null;
     }
     const { error } = await supabase.from("profiles").update(payload as never).eq("id", user.id);
+    if (error) { setBusy(false); toast.error(error.message); return; }
+
+    // Email change via auth (sends confirmation email).
+    if (form.email && form.email !== user.email) {
+      const { error: emErr } = await supabase.auth.updateUser({ email: form.email });
+      if (emErr) { setBusy(false); toast.error(emErr.message); return; }
+      toast.message("E-poçt dəyişikliyi üçün təsdiq linki göndərildi.");
+    }
+
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
     toast.success(t("ok_profile_saved"));
     setEditing(false);
     refresh();

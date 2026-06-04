@@ -28,7 +28,7 @@ function ProfilePage() {
   const { user } = useAuthSession();
   const [form, setForm] = useState<FormState>({
     full_name: "", phone: "", bio: "", social_url: "", avatar_url: "",
-    yt_url: "", tt_url: "", ig_url: "", fin_code: "",
+    yt_url: "", tt_url: "", ig_url: "", fin_code: "", username: "", email: "",
   });
   const [verified, setVerified] = useState(false);
   const [role, setRole] = useState<string | null>(null);

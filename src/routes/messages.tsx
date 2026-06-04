@@ -36,7 +36,7 @@ function MessagesPage() {
       // hydrate other-user names
       const otherIds = list.map((c) => (c.user_a === user.id ? c.user_b : c.user_a));
       if (otherIds.length) {
-        const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", otherIds);
+        const { data: profs } = await supabase.from("profiles").select("id, full_name, username, avatar_url").in("id", otherIds);
         const map = new Map((profs || []).map((p) => [p.id, p]));
         list.forEach((c) => {
           const oid = c.user_a === user.id ? c.user_b : c.user_a;

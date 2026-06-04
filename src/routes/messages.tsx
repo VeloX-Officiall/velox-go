@@ -122,7 +122,10 @@ function MessagesPage() {
             <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">Söhbət seçin</div>
           ) : (
             <>
-              <div className="border-b border-border p-4 font-semibold">{active.other?.full_name || "İstifadəçi"}</div>
+              <Link to="/u/$username" params={{ username: active.other?.username || active.other?.id?.slice(0, 8) || "user" }} className="block border-b border-border p-4 font-semibold hover:bg-accent/30">
+                {active.other?.full_name || active.other?.username || "İstifadəçi"}
+                {active.other?.username && <span className="ml-1 text-xs font-normal text-muted-foreground">@{active.other.username}</span>}
+              </Link>
               <div className="flex-1 space-y-2 overflow-y-auto p-4">
                 {msgs.map((m) => (
                   <div key={m.id} className={`flex ${m.sender_id === user?.id ? "justify-end" : "justify-start"}`}>

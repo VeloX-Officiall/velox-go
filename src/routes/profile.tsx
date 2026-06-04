@@ -20,6 +20,7 @@ export const Route = createFileRoute("/profile")({
 type FormState = {
   full_name: string; phone: string; bio: string; social_url: string; avatar_url: string;
   yt_url: string; tt_url: string; ig_url: string; fin_code: string;
+  username: string; email: string;
 };
 
 function ProfilePage() {

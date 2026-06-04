@@ -55,6 +55,8 @@ function ProfilePage() {
         tt_url: (prof as { tt_url?: string }).tt_url || "",
         ig_url: (prof as { ig_url?: string }).ig_url || "",
         fin_code: (prof as { fin_code?: string }).fin_code || "",
+        username: prof.username || "",
+        email: user.email || "",
       });
       setVerified(!!prof.verified);
       setUsername(prof.username || null);

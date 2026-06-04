@@ -21,11 +21,21 @@ export function SupportBot() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const isMobile = window.innerWidth < 768;
     const saved = localStorage.getItem("velox.bot.pos");
+    // On mobile, place above the bottom navigation (~80px tall) so it's always visible.
+    const defaultY = isMobile ? window.innerHeight - 160 : window.innerHeight - 88;
+    const defaultX = window.innerWidth - 76;
     if (saved) {
-      try { setPos(JSON.parse(saved)); } catch {}
+      try {
+        const p = JSON.parse(saved);
+        setPos({
+          x: Math.min(Math.max(8, p.x), window.innerWidth - 64),
+          y: Math.min(Math.max(8, p.y), window.innerHeight - (isMobile ? 96 : 72)),
+        });
+      } catch { setPos({ x: defaultX, y: defaultY }); }
     } else {
-      setPos({ x: window.innerWidth - 76, y: window.innerHeight - 76 });
+      setPos({ x: defaultX, y: defaultY });
     }
   }, []);
 

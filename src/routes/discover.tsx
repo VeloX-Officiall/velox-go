@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
-import { Search, UtensilsCrossed, ShoppingCart, Shirt, Cookie, BadgeCheck } from "lucide-react";
+import { Search, UtensilsCrossed, ShoppingCart, Shirt, Cookie, BadgeCheck, AtSign, User as UserIcon } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { RequireAuth } from "@/lib/auth";
@@ -18,7 +18,7 @@ const CATEGORIES = [
   { id: "sirniyyat", label: "Şirniyyat", icon: Cookie, tone: "bg-destructive/15 text-destructive" },
 ];
 
-type Store = { id: string; full_name: string | null; username: string | null; avatar_url: string | null; verified: boolean };
+type Account = { id: string; full_name: string | null; username: string | null; avatar_url: string | null; verified: boolean; role?: string | null };
 
 function DiscoverPage() {
   const [stores, setStores] = useState<Store[]>([]);

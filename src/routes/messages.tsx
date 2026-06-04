@@ -12,7 +12,7 @@ export const Route = createFileRoute("/messages")({
   component: () => <RequireAuth><MessagesPage /></RequireAuth>,
 });
 
-type Conv = { id: string; user_a: string; user_b: string; other?: { id: string; full_name: string | null } };
+type Conv = { id: string; user_a: string; user_b: string; other?: { id: string; full_name: string | null; username?: string | null; avatar_url?: string | null } };
 type Msg = { id: string; sender_id: string; body: string; created_at: string };
 
 function MessagesPage() {

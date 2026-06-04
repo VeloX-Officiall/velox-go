@@ -347,11 +347,24 @@ function BrotherhoodChat() {
         <AnimatePresence initial={false}>
           {messages.map((m) => {
             const mine = m.user_id === user?.id;
+            const meta = names[m.user_id];
+            const handle = meta?.username || m.user_id.slice(0, 8);
             return (
               <motion.div key={m.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+                className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
+                {!mine && (
+                  <Link to="/u/$username" params={{ username: handle }} className="shrink-0">
+                    <div className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-accent text-[10px] font-bold ring-1 ring-border">
+                      {meta?.avatar ? <img src={meta.avatar} alt="" className="h-full w-full object-cover" /> : (meta?.label || "?").charAt(0).toUpperCase()}
+                    </div>
+                  </Link>
+                )}
                 <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${mine ? "bg-primary text-primary-foreground" : "bg-accent text-accent-foreground"}`}>
-                  {!mine && <div className="mb-0.5 text-xs font-semibold opacity-70">{names[m.user_id] || "—"}</div>}
+                  {!mine && (
+                    <Link to="/u/$username" params={{ username: handle }} className="mb-0.5 block text-xs font-semibold opacity-70 hover:underline">
+                      {meta?.label || "—"}
+                    </Link>
+                  )}
                   {m.body}
                 </div>
               </motion.div>

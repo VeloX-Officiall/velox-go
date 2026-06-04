@@ -195,12 +195,27 @@ function ProfilePage() {
               <Pencil className="h-4 w-4" /> Profil redaktoru
             </div>
             <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">İstifadəçi adı (@username)</label>
+              <Input
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value.replace(/^@/, "").toLowerCase() })}
+                placeholder="velox_user"
+                className="h-11 rounded-xl"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">3-24 simvol, yalnız hərf, rəqəm və alt xətt (_).</p>
+            </div>
+            <div>
               <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("full_name")}</label>
               <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="h-11 rounded-xl" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("phone")}</label>
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+994..." className="h-11 rounded-xl" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">E-poçt</label>
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ad@example.com" className="h-11 rounded-xl" />
+              <p className="mt-1 text-[10px] text-muted-foreground">Dəyişiklik üçün e-poçtunuza təsdiq linki göndəriləcək.</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-muted-foreground">Avatar URL</label>

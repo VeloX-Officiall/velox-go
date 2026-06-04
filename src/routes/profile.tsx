@@ -20,6 +20,7 @@ export const Route = createFileRoute("/profile")({
 type FormState = {
   full_name: string; phone: string; bio: string; social_url: string; avatar_url: string;
   yt_url: string; tt_url: string; ig_url: string; fin_code: string;
+  username: string; email: string;
 };
 
 function ProfilePage() {
@@ -27,7 +28,7 @@ function ProfilePage() {
   const { user } = useAuthSession();
   const [form, setForm] = useState<FormState>({
     full_name: "", phone: "", bio: "", social_url: "", avatar_url: "",
-    yt_url: "", tt_url: "", ig_url: "", fin_code: "",
+    yt_url: "", tt_url: "", ig_url: "", fin_code: "", username: "", email: "",
   });
   const [verified, setVerified] = useState(false);
   const [role, setRole] = useState<string | null>(null);
@@ -54,6 +55,8 @@ function ProfilePage() {
         tt_url: (prof as { tt_url?: string }).tt_url || "",
         ig_url: (prof as { ig_url?: string }).ig_url || "",
         fin_code: (prof as { fin_code?: string }).fin_code || "",
+        username: prof.username || "",
+        email: user.email || "",
       });
       setVerified(!!prof.verified);
       setUsername(prof.username || null);
@@ -75,6 +78,15 @@ function ProfilePage() {
     const payload: Record<string, unknown> = {
       full_name: form.full_name, phone: form.phone, avatar_url: form.avatar_url,
     };
+    const handle = form.username.trim().replace(/^@/, "").toLowerCase();
+    if (handle && handle !== (username || "").toLowerCase()) {
+      if (!/^[a-z0-9_]{3,24}$/.test(handle)) {
+        setBusy(false);
+        toast.error("Username 3-24 simvol, yalnız a-z, 0-9, _");
+        return;
+      }
+      payload.username = handle;
+    }
     if (isCourier) {
       payload.yt_url = form.yt_url || null;
       payload.tt_url = form.tt_url || null;
@@ -84,8 +96,16 @@ function ProfilePage() {
       payload.social_url = form.social_url || null;
     }
     const { error } = await supabase.from("profiles").update(payload as never).eq("id", user.id);
+    if (error) { setBusy(false); toast.error(error.message); return; }
+
+    // Email change via auth (sends confirmation email).
+    if (form.email && form.email !== user.email) {
+      const { error: emErr } = await supabase.auth.updateUser({ email: form.email });
+      if (emErr) { setBusy(false); toast.error(emErr.message); return; }
+      toast.message("E-poçt dəyişikliyi üçün təsdiq linki göndərildi.");
+    }
+
     setBusy(false);
-    if (error) { toast.error(error.message); return; }
     toast.success(t("ok_profile_saved"));
     setEditing(false);
     refresh();
@@ -175,12 +195,27 @@ function ProfilePage() {
               <Pencil className="h-4 w-4" /> Profil redaktoru
             </div>
             <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">İstifadəçi adı (@username)</label>
+              <Input
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value.replace(/^@/, "").toLowerCase() })}
+                placeholder="velox_user"
+                className="h-11 rounded-xl"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">3-24 simvol, yalnız hərf, rəqəm və alt xətt (_).</p>
+            </div>
+            <div>
               <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("full_name")}</label>
               <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="h-11 rounded-xl" />
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-muted-foreground">{t("phone")}</label>
               <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+994..." className="h-11 rounded-xl" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-muted-foreground">E-poçt</label>
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="ad@example.com" className="h-11 rounded-xl" />
+              <p className="mt-1 text-[10px] text-muted-foreground">Dəyişiklik üçün e-poçtunuza təsdiq linki göndəriləcək.</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-muted-foreground">Avatar URL</label>

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BadgeCheck, User as UserIcon, Pencil, Wallet, Edit3, X, LogOut, ShieldCheck } from "lucide-react";
+import { BadgeCheck, User as UserIcon, Pencil, Wallet, Edit3, X, LogOut, ShieldCheck, Camera, Loader2 } from "lucide-react";
 import { signOut } from "@/lib/auth";
+import { ProfileTabs } from "@/components/ProfileTabs";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile · VeloX" }] }),

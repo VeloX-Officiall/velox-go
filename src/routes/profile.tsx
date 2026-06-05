@@ -114,6 +114,29 @@ function ProfilePage() {
     refresh();
   };
 
+  const onPickAvatar = async (file: File) => {
+    if (!user) return;
+    setUploadingAvatar(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
+        contentType: file.type || "image/jpeg", upsert: true, cacheControl: "3600",
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+      const url = pub.publicUrl;
+      const { error } = await supabase.from("profiles").update({ avatar_url: url } as never).eq("id", user.id);
+      if (error) throw error;
+      setForm((f) => ({ ...f, avatar_url: url }));
+      toast.success("Profil fotosu yeniləndi");
+    } catch (e) {
+      toast.error((e as Error).message || "Yükləmə alınmadı");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader subtitle={t("profile")} />

@@ -20,8 +20,38 @@ type Post = {
   image_url: string | null; video_url: string | null;
   price_azn: number | null; created_at: string;
   author?: { full_name: string | null; username: string | null; avatar_url: string | null };
-  _likes?: number; _comments?: number; _liked?: boolean;
+  _likes?: number; _comments?: number; _liked?: boolean; _reposts?: number; _demo?: boolean;
 };
+
+const DEMO_POSTS: Post[] = [
+  {
+    id: "demo-1", author_id: "demo", author_role: "store",
+    title: "Yeni gələn dəri çanta kolleksiyası",
+    description: "Əl işi, premium dəri. Pulsuz çatdırılma Bakı daxilində.",
+    image_url: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=900&q=80",
+    video_url: null, price_azn: 79.9, created_at: new Date().toISOString(),
+    author: { full_name: "Leather Co", username: "leather_co", avatar_url: "https://i.pravatar.cc/100?img=12" },
+    _likes: 1284, _comments: 56, _liked: false, _reposts: 23, _demo: true,
+  },
+  {
+    id: "demo-2", author_id: "demo", author_role: "store",
+    title: "Ev üçün ətirli şamlar 🕯️",
+    description: "Soya mumu, təbii ətirlər. Hədiyyəlik qutu ilə.",
+    image_url: "https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?w=900&q=80",
+    video_url: null, price_azn: 24.0, created_at: new Date().toISOString(),
+    author: { full_name: "Glow Studio", username: "glow_studio", avatar_url: "https://i.pravatar.cc/100?img=32" },
+    _likes: 542, _comments: 18, _liked: false, _reposts: 7, _demo: true,
+  },
+  {
+    id: "demo-3", author_id: "demo", author_role: "customer",
+    title: "Bakıda ən sürətli kuryer xidməti 🚀",
+    description: "30 dəqiqəyə şəhər daxili çatdırılma — VeloX ilə.",
+    image_url: "https://images.unsplash.com/photo-1526367790999-0150786686a2?w=900&q=80",
+    video_url: null, price_azn: null, created_at: new Date().toISOString(),
+    author: { full_name: "VeloX Team", username: "velox", avatar_url: "https://i.pravatar.cc/100?img=5" },
+    _likes: 3120, _comments: 142, _liked: false, _reposts: 88, _demo: true,
+  },
+];
 
 function FeedPage() {
   const { user } = useAuthSession();

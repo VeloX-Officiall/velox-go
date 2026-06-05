@@ -284,6 +284,8 @@ function ProfilePage() {
             <span>Şəxsiyyət sənədiniz yoxlanılır. Adətən 24 saat çəkir.</span>
           </div>
         )}
+
+        {user && <ProfileTabs userId={user.id} />}
       </main>
       <BottomNav />
     </div>

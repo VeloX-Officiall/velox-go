@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { Heart, MessageCircle, Share2, ShoppingBag, X, Loader2, MapPin } from "lucide-react";
+import { Heart, MessageCircle, Share2, ShoppingBag, X, Loader2, MapPin, Repeat2 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { RequireAuth, useAuthSession } from "@/lib/auth";

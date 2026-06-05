@@ -275,6 +275,33 @@ export type Database = {
           },
         ]
       }
+      post_reposts: {
+        Row: {
+          created_at: string
+          id: string
+          original_author_id: string | null
+          post_id: string
+          snapshot: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          original_author_id?: string | null
+          post_id: string
+          snapshot?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          original_author_id?: string | null
+          post_id?: string
+          snapshot?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           author_id: string

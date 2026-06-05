@@ -183,6 +183,10 @@ function FeedCard({ post, onLike, onShare, onOrder, onComment, onRepost }: {
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur"><MessageCircle className="h-6 w-6" /></span>
           <span className="text-xs font-bold">{post._comments ?? 0}</span>
         </button>
+        <button onClick={onRepost} className="flex flex-col items-center gap-1">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur"><Repeat2 className="h-6 w-6" /></span>
+          <span className="text-xs font-bold">{post._reposts ?? 0}</span>
+        </button>
         <button onClick={onShare} className="flex flex-col items-center gap-1">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur"><Share2 className="h-6 w-6" /></span>
           <span className="text-xs font-bold">Paylaş</span>

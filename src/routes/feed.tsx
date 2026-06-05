@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { Heart, MessageCircle, Share2, ShoppingBag, X, Loader2, MapPin } from "lucide-react";
+import { Heart, MessageCircle, Share2, ShoppingBag, X, Loader2, MapPin, Repeat2 } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
@@ -20,8 +20,38 @@ type Post = {
   image_url: string | null; video_url: string | null;
   price_azn: number | null; created_at: string;
   author?: { full_name: string | null; username: string | null; avatar_url: string | null };
-  _likes?: number; _comments?: number; _liked?: boolean;
+  _likes?: number; _comments?: number; _liked?: boolean; _reposts?: number; _demo?: boolean;
 };
+
+const DEMO_POSTS: Post[] = [
+  {
+    id: "demo-1", author_id: "demo", author_role: "store",
+    title: "Yeni gələn dəri çanta kolleksiyası",
+    description: "Əl işi, premium dəri. Pulsuz çatdırılma Bakı daxilində.",
+    image_url: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=900&q=80",
+    video_url: null, price_azn: 79.9, created_at: new Date().toISOString(),
+    author: { full_name: "Leather Co", username: "leather_co", avatar_url: "https://i.pravatar.cc/100?img=12" },
+    _likes: 1284, _comments: 56, _liked: false, _reposts: 23, _demo: true,
+  },
+  {
+    id: "demo-2", author_id: "demo", author_role: "store",
+    title: "Ev üçün ətirli şamlar 🕯️",
+    description: "Soya mumu, təbii ətirlər. Hədiyyəlik qutu ilə.",
+    image_url: "https://images.unsplash.com/photo-1602874801007-bd458bb1b8b6?w=900&q=80",
+    video_url: null, price_azn: 24.0, created_at: new Date().toISOString(),
+    author: { full_name: "Glow Studio", username: "glow_studio", avatar_url: "https://i.pravatar.cc/100?img=32" },
+    _likes: 542, _comments: 18, _liked: false, _reposts: 7, _demo: true,
+  },
+  {
+    id: "demo-3", author_id: "demo", author_role: "customer",
+    title: "Bakıda ən sürətli kuryer xidməti 🚀",
+    description: "30 dəqiqəyə şəhər daxili çatdırılma — VeloX ilə.",
+    image_url: "https://images.unsplash.com/photo-1526367790999-0150786686a2?w=900&q=80",
+    video_url: null, price_azn: null, created_at: new Date().toISOString(),
+    author: { full_name: "VeloX Team", username: "velox", avatar_url: "https://i.pravatar.cc/100?img=5" },
+    _likes: 3120, _comments: 142, _liked: false, _reposts: 88, _demo: true,
+  },
+];
 
 function FeedPage() {
   const { user } = useAuthSession();
@@ -50,18 +80,26 @@ function FeedPage() {
       const commentCount: Record<string, number> = {};
       (comments || []).forEach((c: any) => { commentCount[c.post_id] = (commentCount[c.post_id] || 0) + 1; });
       const liked = new Set((myLikes || []).map((l: any) => l.post_id));
-      setPosts(data.map((p: any) => ({
+      const real = data.map((p: any) => ({
         ...p,
         author: profMap.get(p.author_id),
         _likes: likeCount[p.id] || 0,
         _comments: commentCount[p.id] || 0,
         _liked: liked.has(p.id),
-      })));
+        _reposts: 0,
+      }));
+      setPosts([...real, ...DEMO_POSTS]);
       setLoading(false);
     })();
   }, [user?.id]);
 
   const toggleLike = async (p: Post) => {
+    if (p._demo) {
+      setPosts((prev) => prev.map((x) => x.id === p.id ? {
+        ...x, _liked: !x._liked, _likes: (x._likes || 0) + (x._liked ? -1 : 1),
+      } : x));
+      return;
+    }
     if (!user) return;
     if (p._liked) {
       await supabase.from("post_likes").delete().eq("post_id", p.id).eq("user_id", user.id);
@@ -70,6 +108,11 @@ function FeedPage() {
       await supabase.from("post_likes").insert({ post_id: p.id, user_id: user.id });
       setPosts((prev) => prev.map((x) => x.id === p.id ? { ...x, _liked: true, _likes: (x._likes || 0) + 1 } : x));
     }
+  };
+
+  const repost = (p: Post) => {
+    setPosts((prev) => prev.map((x) => x.id === p.id ? { ...x, _reposts: (x._reposts || 0) + 1 } : x));
+    toast.success("Yenidən paylaşıldı");
   };
 
   const share = async (p: Post) => {
@@ -86,28 +129,25 @@ function FeedPage() {
       <main className="mx-auto max-w-md">
         {loading ? (
           <div className="flex h-[60vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-        ) : posts.length === 0 ? (
-          <div className="px-6 py-20 text-center text-sm text-muted-foreground">
-            Hələ paylaşım yoxdur. İlk olan siz olun! 
-          </div>
         ) : (
           <div className="snap-y snap-mandatory overflow-y-auto" style={{ height: "calc(100vh - 4rem - 4rem)" }}>
             {posts.map((p) => (
               <FeedCard key={p.id} post={p} onLike={() => toggleLike(p)} onShare={() => share(p)}
+                onRepost={() => repost(p)}
                 onOrder={() => setOrderFor(p)} onComment={() => setCommentsFor(p)} />
             ))}
           </div>
         )}
       </main>
       <BottomNav />
-      {orderFor && <OrderModal post={orderFor} onClose={() => setOrderFor(null)} />}
+      {orderFor && !orderFor._demo && <OrderModal post={orderFor} onClose={() => setOrderFor(null)} />}
       {commentsFor && <CommentsSheet post={commentsFor} onClose={() => setCommentsFor(null)} />}
     </div>
   );
 }
 
-function FeedCard({ post, onLike, onShare, onOrder, onComment }: {
-  post: Post; onLike: () => void; onShare: () => void; onOrder: () => void; onComment: () => void;
+function FeedCard({ post, onLike, onShare, onOrder, onComment, onRepost }: {
+  post: Post; onLike: () => void; onShare: () => void; onOrder: () => void; onComment: () => void; onRepost: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -142,6 +182,10 @@ function FeedCard({ post, onLike, onShare, onOrder, onComment }: {
         <button onClick={onComment} className="flex flex-col items-center gap-1">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur"><MessageCircle className="h-6 w-6" /></span>
           <span className="text-xs font-bold">{post._comments ?? 0}</span>
+        </button>
+        <button onClick={onRepost} className="flex flex-col items-center gap-1">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur"><Repeat2 className="h-6 w-6" /></span>
+          <span className="text-xs font-bold">{post._reposts ?? 0}</span>
         </button>
         <button onClick={onShare} className="flex flex-col items-center gap-1">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 backdrop-blur"><Share2 className="h-6 w-6" /></span>

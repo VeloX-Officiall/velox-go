@@ -5,8 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthSession } from "@/lib/auth";
 import { toast } from "sonner";
 
-const MAX_BYTES = 25 * 1024 * 1024; // 25MB
-
 type Props = {
   value?: string | null;
   kind?: "image" | "video" | "any";
@@ -26,20 +24,20 @@ export function MediaUpload({ value, kind = "any", onUploaded, onClear, classNam
 
   async function handle(file: File) {
     if (!user) { toast.error(t("login_required")); return; }
-    if (file.size > MAX_BYTES) { toast.error(t("file_too_large")); return; }
     setBusy(true);
     try {
-      const ext = file.name.split(".").pop() || "bin";
-      const path = `${user.id}/${Date.now()}.${ext}`;
+      const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+      const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const contentType = file.type || (kind === "video" ? "video/mp4" : "image/jpeg");
       const { error } = await supabase.storage.from("media").upload(path, file, {
-        contentType: file.type, upsert: false,
+        contentType, upsert: false, cacheControl: "3600",
       });
       if (error) throw error;
       const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
-      onUploaded(pub.publicUrl, file.type);
+      onUploaded(pub.publicUrl, contentType);
       toast.success(t("uploaded"));
     } catch (e) {
-      toast.error((e as Error).message);
+      toast.error((e as Error).message || "Yükləmə alınmadı");
     } finally {
       setBusy(false);
     }
@@ -75,7 +73,6 @@ export function MediaUpload({ value, kind = "any", onUploaded, onClear, classNam
                 {kind !== "image" && <Film className="h-5 w-5" />}
               </div>
               <span className="flex items-center gap-1.5"><Upload className="h-3.5 w-3.5" /> {t("upload_media")}</span>
-              <span className="text-[10px] opacity-70">{t("max_size_25mb")}</span>
             </>
           )}
         </button>

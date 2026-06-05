@@ -97,6 +97,3 @@ export function ProfileTabs({ userId }: { userId: string }) {
     );
   }
 }
-
-// avoid unused import warning when Link not used
-export const _ = Link;

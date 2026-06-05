@@ -80,18 +80,26 @@ function FeedPage() {
       const commentCount: Record<string, number> = {};
       (comments || []).forEach((c: any) => { commentCount[c.post_id] = (commentCount[c.post_id] || 0) + 1; });
       const liked = new Set((myLikes || []).map((l: any) => l.post_id));
-      setPosts(data.map((p: any) => ({
+      const real = data.map((p: any) => ({
         ...p,
         author: profMap.get(p.author_id),
         _likes: likeCount[p.id] || 0,
         _comments: commentCount[p.id] || 0,
         _liked: liked.has(p.id),
-      })));
+        _reposts: 0,
+      }));
+      setPosts([...real, ...DEMO_POSTS]);
       setLoading(false);
     })();
   }, [user?.id]);
 
   const toggleLike = async (p: Post) => {
+    if (p._demo) {
+      setPosts((prev) => prev.map((x) => x.id === p.id ? {
+        ...x, _liked: !x._liked, _likes: (x._likes || 0) + (x._liked ? -1 : 1),
+      } : x));
+      return;
+    }
     if (!user) return;
     if (p._liked) {
       await supabase.from("post_likes").delete().eq("post_id", p.id).eq("user_id", user.id);
@@ -100,6 +108,11 @@ function FeedPage() {
       await supabase.from("post_likes").insert({ post_id: p.id, user_id: user.id });
       setPosts((prev) => prev.map((x) => x.id === p.id ? { ...x, _liked: true, _likes: (x._likes || 0) + 1 } : x));
     }
+  };
+
+  const repost = (p: Post) => {
+    setPosts((prev) => prev.map((x) => x.id === p.id ? { ...x, _reposts: (x._reposts || 0) + 1 } : x));
+    toast.success("Yenidən paylaşıldı");
   };
 
   const share = async (p: Post) => {
@@ -116,28 +129,25 @@ function FeedPage() {
       <main className="mx-auto max-w-md">
         {loading ? (
           <div className="flex h-[60vh] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-        ) : posts.length === 0 ? (
-          <div className="px-6 py-20 text-center text-sm text-muted-foreground">
-            Hələ paylaşım yoxdur. İlk olan siz olun! 
-          </div>
         ) : (
           <div className="snap-y snap-mandatory overflow-y-auto" style={{ height: "calc(100vh - 4rem - 4rem)" }}>
             {posts.map((p) => (
               <FeedCard key={p.id} post={p} onLike={() => toggleLike(p)} onShare={() => share(p)}
+                onRepost={() => repost(p)}
                 onOrder={() => setOrderFor(p)} onComment={() => setCommentsFor(p)} />
             ))}
           </div>
         )}
       </main>
       <BottomNav />
-      {orderFor && <OrderModal post={orderFor} onClose={() => setOrderFor(null)} />}
+      {orderFor && !orderFor._demo && <OrderModal post={orderFor} onClose={() => setOrderFor(null)} />}
       {commentsFor && <CommentsSheet post={commentsFor} onClose={() => setCommentsFor(null)} />}
     </div>
   );
 }
 
-function FeedCard({ post, onLike, onShare, onOrder, onComment }: {
-  post: Post; onLike: () => void; onShare: () => void; onOrder: () => void; onComment: () => void;
+function FeedCard({ post, onLike, onShare, onOrder, onComment, onRepost }: {
+  post: Post; onLike: () => void; onShare: () => void; onOrder: () => void; onComment: () => void; onRepost: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {

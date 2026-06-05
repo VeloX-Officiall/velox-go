@@ -147,6 +147,7 @@ function UserProfilePage() {
             </div>
           </div>
         )}
+        {profile && <ProfileTabs userId={profile.id} />}
       </main>
       <BottomNav />
     </div>

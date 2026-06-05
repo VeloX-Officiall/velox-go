@@ -145,11 +145,17 @@ function ProfilePage() {
         <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-card">
           <div className="bg-gradient-hero p-6 text-primary-foreground">
             <div className="flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white/20 ring-2 ring-white/40">
+              <button type="button" onClick={() => avatarInputRef.current?.click()}
+                className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white/20 ring-2 ring-white/40 transition hover:ring-white">
                 {form.avatar_url
                   ? <img src={form.avatar_url} alt="" className="h-full w-full object-cover" />
                   : <UserIcon className="h-10 w-10 text-white/90" />}
-              </div>
+                <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                  {uploadingAvatar ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+                </span>
+              </button>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickAvatar(f); e.target.value = ""; }} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 text-xl font-bold">
                   <span className="truncate">{form.full_name || username || "Profil"}</span>

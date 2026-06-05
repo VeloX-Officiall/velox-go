@@ -39,6 +39,8 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [wallet, setWallet] = useState<number>(0);
   const [deliveredCount, setDeliveredCount] = useState(0);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
     if (!user) return;

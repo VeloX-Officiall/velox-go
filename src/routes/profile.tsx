@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BadgeCheck, User as UserIcon, Pencil, Wallet, Edit3, X, LogOut, ShieldCheck } from "lucide-react";
+import { BadgeCheck, User as UserIcon, Pencil, Wallet, Edit3, X, LogOut, ShieldCheck, Camera, Loader2 } from "lucide-react";
 import { signOut } from "@/lib/auth";
+import { ProfileTabs } from "@/components/ProfileTabs";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile · VeloX" }] }),
@@ -38,6 +39,8 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [wallet, setWallet] = useState<number>(0);
   const [deliveredCount, setDeliveredCount] = useState(0);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const refresh = async () => {
     if (!user) return;
@@ -111,6 +114,29 @@ function ProfilePage() {
     refresh();
   };
 
+  const onPickAvatar = async (file: File) => {
+    if (!user) return;
+    setUploadingAvatar(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("media").upload(path, file, {
+        contentType: file.type || "image/jpeg", upsert: true, cacheControl: "3600",
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+      const url = pub.publicUrl;
+      const { error } = await supabase.from("profiles").update({ avatar_url: url } as never).eq("id", user.id);
+      if (error) throw error;
+      setForm((f) => ({ ...f, avatar_url: url }));
+      toast.success("Profil fotosu yeniləndi");
+    } catch (e) {
+      toast.error((e as Error).message || "Yükləmə alınmadı");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader subtitle={t("profile")} />
@@ -119,11 +145,17 @@ function ProfilePage() {
         <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-card">
           <div className="bg-gradient-hero p-6 text-primary-foreground">
             <div className="flex items-center gap-4">
-              <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white/20 ring-2 ring-white/40">
+              <button type="button" onClick={() => avatarInputRef.current?.click()}
+                className="relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white/20 ring-2 ring-white/40 transition hover:ring-white">
                 {form.avatar_url
                   ? <img src={form.avatar_url} alt="" className="h-full w-full object-cover" />
                   : <UserIcon className="h-10 w-10 text-white/90" />}
-              </div>
+                <span className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition hover:opacity-100">
+                  {uploadingAvatar ? <Loader2 className="h-5 w-5 animate-spin text-white" /> : <Camera className="h-5 w-5 text-white" />}
+                </span>
+              </button>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickAvatar(f); e.target.value = ""; }} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 text-xl font-bold">
                   <span className="truncate">{form.full_name || username || "Profil"}</span>
@@ -252,6 +284,8 @@ function ProfilePage() {
             <span>Şəxsiyyət sənədiniz yoxlanılır. Adətən 24 saat çəkir.</span>
           </div>
         )}
+
+        {user && <ProfileTabs userId={user.id} />}
       </main>
       <BottomNav />
     </div>

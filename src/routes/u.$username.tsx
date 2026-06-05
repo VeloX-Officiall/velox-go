@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { RequireAuth, useAuthSession } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { BadgeCheck, User as UserIcon, MessageCircle, Youtube, Instagram, Music2, ArrowLeft } from "lucide-react";
+import { ProfileTabs } from "@/components/ProfileTabs";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/u/$username")({
@@ -146,6 +147,7 @@ function UserProfilePage() {
             </div>
           </div>
         )}
+        {profile && <ProfileTabs userId={profile.id} />}
       </main>
       <BottomNav />
     </div>

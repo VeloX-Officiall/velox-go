@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Wallet, Plus, MapPin, Lock, Send, Users, Clock, Package, Radio } from "lucide-react";
+import { Play, Wallet, Plus, MapPin, Lock, Send, Users, Clock, Package, Radio, X } from "lucide-react";
 import "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";

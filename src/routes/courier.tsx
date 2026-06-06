@@ -230,7 +230,12 @@ function CourierDashboard() {
                   </div>
                   <div className="text-right">
                     <div className="text-xl font-bold text-success">{o.fee_azn ? `${o.fee_azn} AZN` : "—"}</div>
-                    <Button size="sm" onClick={() => acceptOrder(o)} className="mt-2 rounded-lg">{t("take")}</Button>
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => rejectOrder(o)} className="gap-1 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10">
+                        <X className="h-3.5 w-3.5" /> Rədd et
+                      </Button>
+                      <Button size="sm" onClick={() => acceptOrder(o)} className="rounded-lg">{t("take")}</Button>
+                    </div>
                   </div>
                 </div>
               ))}

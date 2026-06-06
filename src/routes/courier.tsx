@@ -62,14 +62,20 @@ function CourierDashboard() {
     } else { setDayActive(false); setEndsAt(null); }
   }, [user?.id]);
 
+  const [rejected, setRejected] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("velox_rejected_orders") || "[]"); } catch { return []; }
+  });
+
   const loadOrders = useCallback(async () => {
     const { data } = await supabase
       .from("orders").select("*")
       .in("status", ["ready", "pending"])
       .is("courier_id", null)
       .order("created_at", { ascending: false }).limit(30);
-    setOrders((data as Order[]) || []);
-  }, []);
+    const rows = (data as Order[]) || [];
+    setOrders(rows.filter((o) => !rejected.includes(o.id)));
+  }, [rejected]);
 
   useEffect(() => { loadWallet(); loadOrders(); }, [loadWallet, loadOrders]);
   useEffect(() => {

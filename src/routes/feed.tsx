@@ -156,12 +156,26 @@ function FeedPage() {
   };
 
   const order = (p: Post) => {
+    // Always route somewhere meaningful — never dead-end on a toast.
     if (p._demo) {
-      if (p.author?.username) navigate({ to: "/u/$username", params: { username: p.author.username } });
-      else toast.message("Demo post — sifariş üçün real mağaza seçin");
+      if (p.author?.username) {
+        navigate({ to: "/u/$username", params: { username: p.author.username } });
+        return;
+      }
+      // Demo post with no username → fall through to customer order screen.
+      navigate({ to: "/customer" });
       return;
     }
-    setOrderFor(p);
+    if (p.price_azn != null && p.author_id) {
+      setOrderFor(p);
+      return;
+    }
+    // Real post without a price → open the store/author profile so the user can browse.
+    if (p.author?.username) {
+      navigate({ to: "/u/$username", params: { username: p.author.username } });
+    } else {
+      navigate({ to: "/customer" });
+    }
   };
 
   return (

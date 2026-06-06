@@ -415,6 +415,7 @@ export type Database = {
           amount_azn: number
           card_last4: string | null
           created_at: string
+          direction: string
           id: string
           kind: string
           status: string
@@ -424,6 +425,7 @@ export type Database = {
           amount_azn: number
           card_last4?: string | null
           created_at?: string
+          direction?: string
           id?: string
           kind?: string
           status?: string
@@ -433,6 +435,7 @@ export type Database = {
           amount_azn?: number
           card_last4?: string | null
           created_at?: string
+          direction?: string
           id?: string
           kind?: string
           status?: string

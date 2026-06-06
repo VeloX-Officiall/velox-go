@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Wallet, Plus, MapPin, Lock, Send, Users, Clock, Package, Radio } from "lucide-react";
+import { Play, Wallet, Plus, MapPin, Lock, Send, Users, Clock, Package, Radio, X } from "lucide-react";
 import "@/lib/i18n";
 import { AppHeader } from "@/components/AppHeader";
 import { BottomNav } from "@/components/BottomNav";
@@ -62,14 +62,20 @@ function CourierDashboard() {
     } else { setDayActive(false); setEndsAt(null); }
   }, [user?.id]);
 
+  const [rejected, setRejected] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("velox_rejected_orders") || "[]"); } catch { return []; }
+  });
+
   const loadOrders = useCallback(async () => {
     const { data } = await supabase
       .from("orders").select("*")
       .in("status", ["ready", "pending"])
       .is("courier_id", null)
       .order("created_at", { ascending: false }).limit(30);
-    setOrders((data as Order[]) || []);
-  }, []);
+    const rows = (data as Order[]) || [];
+    setOrders(rows.filter((o) => !rejected.includes(o.id)));
+  }, [rejected]);
 
   useEffect(() => { loadWallet(); loadOrders(); }, [loadWallet, loadOrders]);
   useEffect(() => {
@@ -130,6 +136,14 @@ function CourierDashboard() {
     if (error) { toast.error(error.message); return; }
     toast.success(t("ok_order_taken"));
     loadOrders();
+  };
+
+  const rejectOrder = (o: Order) => {
+    const next = Array.from(new Set([...rejected, o.id]));
+    setRejected(next);
+    try { localStorage.setItem("velox_rejected_orders", JSON.stringify(next)); } catch { /* ignore */ }
+    setOrders((prev) => prev.filter((x) => x.id !== o.id));
+    toast.success("Sifariş rədd edildi");
   };
 
   const hoursLeft = endsAt ? Math.max(0, Math.ceil((endsAt - now) / 3600_000)) : 0;
@@ -216,7 +230,12 @@ function CourierDashboard() {
                   </div>
                   <div className="text-right">
                     <div className="text-xl font-bold text-success">{o.fee_azn ? `${o.fee_azn} AZN` : "—"}</div>
-                    <Button size="sm" onClick={() => acceptOrder(o)} className="mt-2 rounded-lg">{t("take")}</Button>
+                    <div className="mt-2 flex justify-end gap-2">
+                      <Button size="sm" variant="outline" onClick={() => rejectOrder(o)} className="gap-1 rounded-lg border-destructive/40 text-destructive hover:bg-destructive/10">
+                        <X className="h-3.5 w-3.5" /> Rədd et
+                      </Button>
+                      <Button size="sm" onClick={() => acceptOrder(o)} className="rounded-lg">{t("take")}</Button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -138,6 +138,14 @@ function CourierDashboard() {
     loadOrders();
   };
 
+  const rejectOrder = (o: Order) => {
+    const next = Array.from(new Set([...rejected, o.id]));
+    setRejected(next);
+    try { localStorage.setItem("velox_rejected_orders", JSON.stringify(next)); } catch { /* ignore */ }
+    setOrders((prev) => prev.filter((x) => x.id !== o.id));
+    toast.success("Sifariş rədd edildi");
+  };
+
   const hoursLeft = endsAt ? Math.max(0, Math.ceil((endsAt - now) / 3600_000)) : 0;
 
   return (

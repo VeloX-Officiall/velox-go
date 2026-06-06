@@ -108,13 +108,9 @@ function CourierDashboard() {
   const finalizeTopUp = async (last4: string) => {
     if (!user) return;
     const amt = parseFloat(topUpAmount);
-    const newBal = +(balance + amt).toFixed(2);
-    const { error } = await supabase.from("courier_wallet").update({ balance_azn: newBal }).eq("user_id", user.id);
+    const { data, error } = await supabase.rpc("topup_wallet" as never, { _amount: amt, _card_last4: last4 } as never);
     if (error) { toast.error(error.message); return; }
-    await supabase.from("transactions").insert({
-      user_id: user.id, amount_azn: amt, status: "success",
-      card_last4: last4, kind: "topup",
-    });
+    const newBal = Number(data ?? balance + amt);
     setBalance(newBal);
     toast.success(`+${amt} AZN`);
   };

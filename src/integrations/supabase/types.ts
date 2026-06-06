@@ -463,6 +463,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_my_profile: {
+        Args: never
+        Returns: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          day_pass_until: string | null
+          fin_code: string | null
+          full_name: string | null
+          id: string
+          id_document_url: string | null
+          id_status: string
+          ig_url: string | null
+          is_online: boolean
+          last_seen_at: string | null
+          phone: string | null
+          social_url: string | null
+          status: string
+          tt_url: string | null
+          username: string | null
+          verified: boolean
+          yt_url: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -472,6 +502,10 @@ export type Database = {
       }
       refresh_store_verified: { Args: { _store: string }; Returns: undefined }
       start_courier_day: { Args: never; Returns: Json }
+      topup_wallet: {
+        Args: { _amount: number; _card_last4: string }
+        Returns: number
+      }
     }
     Enums: {
       app_role: "courier" | "store" | "customer"

@@ -45,25 +45,26 @@ function ProfilePage() {
   const refresh = async () => {
     if (!user) return;
     const [{ data: prof }, { data: roleRow }, { data: w }, { data: orders }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase.rpc("get_my_profile" as never).then((r) => ({ data: (r.data as unknown) as Record<string, unknown> | null })),
       supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
       supabase.from("courier_wallet").select("balance_azn").eq("user_id", user.id).maybeSingle(),
       supabase.from("orders").select("id", { count: "exact" }).eq("courier_id", user.id).eq("status", "delivered"),
     ]);
     if (prof) {
+      const p = prof as Record<string, string | boolean | null | undefined>;
       setForm({
-        full_name: prof.full_name || "", phone: prof.phone || "", bio: prof.bio || "",
-        social_url: prof.social_url || "", avatar_url: prof.avatar_url || "",
-        yt_url: (prof as { yt_url?: string }).yt_url || "",
-        tt_url: (prof as { tt_url?: string }).tt_url || "",
-        ig_url: (prof as { ig_url?: string }).ig_url || "",
-        fin_code: (prof as { fin_code?: string }).fin_code || "",
-        username: prof.username || "",
+        full_name: (p.full_name as string) || "", phone: (p.phone as string) || "", bio: (p.bio as string) || "",
+        social_url: (p.social_url as string) || "", avatar_url: (p.avatar_url as string) || "",
+        yt_url: (p.yt_url as string) || "",
+        tt_url: (p.tt_url as string) || "",
+        ig_url: (p.ig_url as string) || "",
+        fin_code: (p.fin_code as string) || "",
+        username: (p.username as string) || "",
         email: user.email || "",
       });
-      setVerified(!!prof.verified);
-      setUsername(prof.username || null);
-      setIdStatus((prof as { id_status?: string }).id_status || "none");
+      setVerified(!!p.verified);
+      setUsername((p.username as string) || null);
+      setIdStatus((p.id_status as string) || "none");
     }
     setRole(roleRow?.role || null);
     setWallet(Number(w?.balance_azn || 0));

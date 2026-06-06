@@ -45,7 +45,7 @@ function ProfilePage() {
   const refresh = async () => {
     if (!user) return;
     const [{ data: prof }, { data: roleRow }, { data: w }, { data: orders }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase.rpc("get_my_profile" as never).then((r) => ({ data: (r.data as unknown) as Record<string, unknown> | null })),
       supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
       supabase.from("courier_wallet").select("balance_azn").eq("user_id", user.id).maybeSingle(),
       supabase.from("orders").select("id", { count: "exact" }).eq("courier_id", user.id).eq("status", "delivered"),

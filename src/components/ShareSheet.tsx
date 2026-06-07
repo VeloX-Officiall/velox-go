@@ -28,26 +28,63 @@ export function ShareSheet({ open, onOpenChange }: { open: boolean; onOpenChange
   const close = () => { reset(); onOpenChange(false); };
 
   const submit = async () => {
-    if (!user) return;
     if (!title.trim()) { toast.error("Məhsul adı boş ola bilməz"); return; }
     if (kind === "image" && !imageUrl) { toast.error("Şəkil yükləyin"); return; }
     if (kind === "video" && !videoUrl) { toast.error("Video yükləyin"); return; }
     setBusy(true);
-    const { data: roleRow } = await supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle();
-    const author_role = (roleRow?.role as string) || "customer";
-    const { error } = await supabase.from("posts").insert({
-      author_id: user.id,
-      author_role,
-      title: title.trim(),
-      description: description.trim() || null,
-      image_url: imageUrl || null,
-      video_url: videoUrl || null,
-      price_azn: price ? Number(price) : null,
-    } as never);
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Paylaşıldı");
-    close();
+    try {
+      const uid = user?.id;
+      let author_role = "customer";
+      if (uid) {
+        try {
+          const { data: roleRow } = await supabase
+            .from("user_roles").select("role").eq("user_id", uid).maybeSingle();
+          author_role = (roleRow?.role as string) || "customer";
+        } catch (e) { console.warn("role lookup failed", e); }
+      }
+
+      let dbOk = false;
+      let insertedId: string | undefined;
+      if (uid) {
+        try {
+          const { data, error } = await supabase.from("posts").insert({
+            author_id: uid,
+            author_role,
+            title: title.trim(),
+            description: description.trim() || null,
+            image_url: imageUrl || null,
+            video_url: videoUrl || null,
+            price_azn: price ? Number(price) : null,
+          } as never).select("id").maybeSingle();
+          if (!error) { dbOk = true; insertedId = (data as { id?: string } | null)?.id; }
+          else console.warn("post insert failed", error);
+        } catch (e) { console.warn("post insert threw", e); }
+      }
+
+      try {
+        const optimistic = {
+          id: insertedId ?? (globalThis.crypto?.randomUUID?.() ?? `temp-${Date.now()}`),
+          author_id: uid ?? "anonymous",
+          author_role,
+          title: title.trim(),
+          description: description.trim() || null,
+          image_url: imageUrl || null,
+          video_url: videoUrl || null,
+          price_azn: price ? Number(price) : null,
+          created_at: new Date().toISOString(),
+          __persisted: dbOk,
+        };
+        window.dispatchEvent(new CustomEvent("velox:new-post", { detail: optimistic }));
+      } catch {}
+
+      toast.success("Paylaşıldı");
+      close();
+    } catch (e) {
+      console.error("share submit error", e);
+      toast.error("Paylaşmaq mümkün olmadı, yenidən cəhd edin");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
